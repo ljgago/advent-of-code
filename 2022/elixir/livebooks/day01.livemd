@@ -2,7 +2,7 @@
 
 ```elixir
 Mix.install([
-  {:kino_aoc, git: "https://github.com/ljgago/kino_aoc"}
+  {:kino_aoc, "~> 0.1"}
 ])
 ```
 
@@ -61,15 +61,18 @@ In the example above, the top three Elves are the fourth Elf (with `24000` Calor
 
 Find the top three Elves carrying the most Calories. **How many Calories are those Elves carrying in total?**
 
-## Parser
+## Puzzle
 
 <!-- livebook:{"attrs":{"day":"1","session_secret":"AOC_SESSION","variable":"puzzle_input","year":"2022"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
 
 ```elixir
-{:ok, puzzle_input} = KinoAOC.download_puzzle("2022", "1", System.fetch_env!("LB_AOC_SESSION"))
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2022", "1", System.fetch_env!("LB_AOC_SESSION"))
 ```
 
-### Code
+## Parser
+
+### Code - Parser
 
 ```elixir
 defmodule Parser do
@@ -84,7 +87,7 @@ defmodule Parser do
 end
 ```
 
-### Tests
+### Tests - Parser
 
 ```elixir
 ExUnit.start(autorun: false)
@@ -105,15 +108,15 @@ end
 ExUnit.run()
 ```
 
-<!-- livebook:{"branch_parent_index":1} -->
+<!-- livebook:{"branch_parent_index":2} -->
 
 ## Part One
 
-### Code
+### Code - Part 1
 
 ```elixir
 defmodule PartOne do
-  def resolve(input) do
+  def solve(input) do
     IO.puts("--- Part One ---")
     IO.puts("Result: #{run(input)}")
   end
@@ -127,7 +130,7 @@ defmodule PartOne do
 end
 ```
 
-### Tests
+### Tests - Part 1
 
 ```elixir
 ExUnit.start(autorun: false)
@@ -148,21 +151,21 @@ end
 ExUnit.run()
 ```
 
-### Solution
+### Solution - Part 1
 
 ```elixir
-PartOne.resolve(puzzle_input)
+PartOne.solve(puzzle_input)
 ```
 
-<!-- livebook:{"branch_parent_index":1} -->
+<!-- livebook:{"branch_parent_index":2} -->
 
 ## Part Two
 
-### Code
+### Code - Part 2
 
 ```elixir
 defmodule PartTwo do
-  def resolve(input) do
+  def solve(input) do
     IO.puts("--- Part Two ---")
     IO.puts("Result: #{run(input)}")
   end
@@ -178,7 +181,7 @@ defmodule PartTwo do
 end
 ```
 
-### Tests
+### Tests - Part 2
 
 ```elixir
 ExUnit.start(autorun: false)
@@ -199,8 +202,10 @@ end
 ExUnit.run()
 ```
 
-### Solution
+### Solution - Part 2
 
 ```elixir
-PartTwo.resolve(puzzle_input)
+PartTwo.solve(puzzle_input)
 ```
+
+<!-- livebook:{"offset":5868,"stamp":{"token":"XCP.1UxA40THPhVhj3lfjseHIEB0T9FlhJmTHY4FbC8BjhrHYMetjuDhiqipr7bbRm6VRlnIGSkdL5jHP4wz4CfLQcSNQsbSqeBmdMappNDvmsG7aEdIEaLG","version":2}} -->
