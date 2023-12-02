@@ -80,21 +80,25 @@ defmodule PartOne do
   def run(input) do
     input
     |> String.split()
-    |> Enum.map(&filter_by_regex(&1))
-    |> Enum.map(&to_two_digit_number(&1))
+    |> Enum.map(&compute_calibration(&1))
     |> Enum.sum()
   end
 
-  @regex ~r/[0-9]/
-
-  defp filter_by_regex(string) do
-    Regex.scan(@regex, string)
-    |> List.flatten()
-    |> Enum.join()
+  defp compute_calibration(value) do
+    value
+    |> filter_code()
+    |> to_two_digit_number()
   end
 
-  defp to_two_digit_number(string) do
-    [String.first(string), String.last(string)]
+  defp filter_code(value) do
+    value
+    |> String.codepoints()
+    |> Enum.filter(&String.match?(&1, ~r/[1-9]/))
+  end
+
+  defp to_two_digit_number(value) do
+    value
+    |> (&[List.first(&1), List.last(&1)]).()
     |> Enum.join()
     |> String.to_integer()
   end
@@ -144,40 +148,47 @@ defmodule PartTwo do
   def run(input) do
     input
     |> String.split()
-    |> Enum.map(&filter_by_regex(&1))
-    |> Enum.map(&to_two_digit_number(&1))
+    |> Enum.map(&compute_calibration(&1))
     |> Enum.sum()
   end
 
-  @map %{
-    "one" => "1",
-    "two" => "2",
-    "three" => "3",
-    "four" => "4",
-    "five" => "5",
-    "six" => "6",
-    "seven" => "7",
-    "eight" => "8",
-    "nine" => "9"
-  }
-
-  @regex ~r/[0-9]|(?=(one|two|three|four|five|six|seven|eight|nine))/
-
-  defp filter_by_regex(string) do
-    Regex.scan(@regex, string)
-    |> List.flatten()
-    |> Enum.filter(&(&1 != ""))
-    |> Enum.map(fn string ->
-      case Map.has_key?(@map, string) do
-        true -> Map.get(@map, string)
-        false -> string
-      end
-    end)
-    |> Enum.join()
+  defp compute_calibration(code) do
+    code
+    |> filter_code()
+    |> to_two_digit_number()
   end
 
-  defp to_two_digit_number(string) do
-    [String.first(string), String.last(string)]
+  @regex ~r/^([1-9]|one|two|three|four|five|six|seven|eight|nine)/
+
+  defp filter_code(value, acc \\ [])
+  defp filter_code("", acc), do: Enum.reverse(acc)
+
+  defp filter_code(value, acc) do
+    <<_::utf8, rest::binary>> = value
+
+    case Regex.run(@regex, value, capture: :first) do
+      nil -> filter_code(rest, acc)
+      digit -> filter_code(rest, [List.first(digit) | acc])
+    end
+  end
+
+  defp to_two_digit_number(value) do
+    value
+    |> Enum.map(fn digit ->
+      case digit do
+        "one" -> "1"
+        "two" -> "2"
+        "three" -> "3"
+        "four" -> "4"
+        "five" -> "5"
+        "six" -> "6"
+        "seven" -> "7"
+        "eight" -> "8"
+        "nine" -> "9"
+        _ -> digit
+      end
+    end)
+    |> (&[List.first(&1), List.last(&1)]).()
     |> Enum.join()
     |> String.to_integer()
   end
@@ -211,4 +222,4 @@ ExUnit.run()
 PartTwo.solve(puzzle_input)
 ```
 
-<!-- livebook:{"offset":5587,"stamp":{"token":"XCP.6JpCHffdtBv1-NjIVqIvSvIDd5RdZW8Wf3UBc9GYLBBzWmUz2i0YBhtD2i6jEwLO19ZhpqagPZn7KcPsZ6a0kJ2vj1h50jz8OqiS5e5uXHS5zl3XvfxR","version":2}} -->
+<!-- livebook:{"offset":5846,"stamp":{"token":"XCP.2tKI6Dp-Yep6LGFp6OjzghLUGGZ5UHXNCyVDyYHt9R0ljosb8KW1Spo-zlbX0ubX46h6PPRZijH_pjkOOLwfiNZStyswzPLa1kvF8IHSvCjUmy3vG5in","version":2}} -->
