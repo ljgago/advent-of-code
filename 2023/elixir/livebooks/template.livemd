@@ -1,6 +1,6 @@
 <!-- livebook:{"autosave_interval_s":30} -->
 
-# Advent of Code 2023 - Day 1
+# Advent of Code 2023 - Day 1 -Template
 
 ```elixir
 Mix.install([
@@ -51,8 +51,7 @@ defmodule ParserTest do
   @expected nil
 
   test "parse test" do
-    actual = parse(@input)
-    assert actual == @expected
+    assert parse(@input) == @expected
   end
 end
 
@@ -90,8 +89,7 @@ defmodule PartOneTest do
   @expected nil
 
   test "part one" do
-    actual = run(@input)
-    assert actual == @expected
+    assert run(@input) == @expected
   end
 end
 
@@ -135,8 +133,7 @@ defmodule PartTwoTest do
   @expected nil
 
   test "part two" do
-    actual = run(@input)
-    assert actual == @expected
+    assert run(@input) == @expected
   end
 end
 
@@ -149,4 +146,4 @@ ExUnit.run()
 PartTwo.solve(puzzle_input)
 ```
 
-<!-- livebook:{"offset":2053,"stamp":{"token":"XCP.P37aADyl2_bHGbcabeVjcXo6F3_Dz1WGD_YvbC23ypHE96c8f-pZlpqP9p4y_hPBc1nwne5yYr8kIEX37mrp0HGzdfSxpaMPhgH8xI2hpDOLxDMf8C2m","version":2}} -->
+<!-- livebook:{"offset":2003,"stamp":{"token":"XCP.fcDhe047nccYUpun7etHH4lwTtFAuYanC6TOUQNqbqgKjC7hoTIhV6Jn-HbxcxwclWhLcG17TMNNwmMUTH4NTpuMGLQZQXA-RWCcsc2m8cEKNyV1eiAq","version":2}} -->
