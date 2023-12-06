@@ -1,0 +1,479 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2023 - Day 5
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 5: If You Give A Seed A Fertilizer ---
+
+You take the boat and find the gardener right where you were told he would be: managing a giant "garden" that looks more to you like a farm.
+
+"A water source? Island Island **is** the water source!" You point out that Snow Island isn't receiving any water.
+
+"Oh, we had to stop the water because we **ran out of sand** to [filter](https://en.wikipedia.org/wiki/Sand_filter) it with! Can't make snow with dirty water. Don't worry, I'm sure we'll get more sand soon; we only turned off the water a few days... weeks... oh no." His face sinks into a look of horrified realization.
+
+"I've been so busy making sure everyone here has food that I completely forgot to check why we stopped getting more sand! There's a ferry leaving soon that is headed over in that direction - it's much faster than your boat. Could you please go check it out?"
+
+You barely have time to agree to this request when he brings up another. "While you wait for the ferry, maybe you can help us with our **food production problem**. The latest Island Island [Almanac](https://en.wikipedia.org/wiki/Almanac) just arrived and we're having trouble making sense of it."
+
+The almanac (your puzzle input) lists all of the seeds that need to be planted. It also lists what type of soil to use with each kind of seed, what type of fertilizer to use with each kind of soil, what type of water to use with each kind of fertilizer, and so on. Every type of seed, soil, fertilizer and so on is identified with a number, but numbers are reused by each category - that is, soil `123` and fertilizer `123` aren't necessarily related to each other.
+
+For example:
+
+```
+seeds: 79 14 55 13
+
+seed-to-soil map:
+50 98 2
+52 50 48
+
+soil-to-fertilizer map:
+0 15 37
+37 52 2
+39 0 15
+
+fertilizer-to-water map:
+49 53 8
+0 11 42
+42 0 7
+57 7 4
+
+water-to-light map:
+88 18 7
+18 25 70
+
+light-to-temperature map:
+45 77 23
+81 45 19
+68 64 13
+
+temperature-to-humidity map:
+0 69 1
+1 0 69
+
+humidity-to-location map:
+60 56 37
+56 93 4
+```
+
+The almanac starts by listing which seeds need to be planted: seeds `79`, `14`, `55`, and `13`.
+
+The rest of the almanac contains a list of **maps** which describe how to convert numbers from a **source category** into numbers in a **destination category**. That is, the section that starts with `seed-to-soil map:` describes how to convert a **seed number** (the source) to a **soil number** (the destination). This lets the gardener and his team know which soil to use with which seeds, which water to use with which fertilizer, and so on.
+
+Rather than list every source number and its corresponding destination number one by one, the maps describe entire **ranges** of numbers that can be converted. Each line within a map contains three numbers: the **destination range start**, the **source range start**, and the **range length**.
+
+Consider again the example `seed-to-soil map`:
+
+```
+50 98 2
+52 50 48
+```
+
+The first line has a **destination range start** of `50`, a **source range start** of `98`, and a **range length** of `2`. This line means that the source range starts at `98` and contains two values: `98` and `99`. The destination range is the same length, but it starts at `50`, so its two values are `50` and `51`. With this information, you know that seed number `98` corresponds to soil number `50` and that seed number `99` corresponds to soil number `51`.
+
+The second line means that the source range starts at `50` and contains `48` values: `50`, `51`, ..., `96`, `97`. This corresponds to a destination range starting at `52` and also containing `48` values: `52`, `53`, ..., `98`, `99`. So, seed number `53` corresponds to soil number `55`.
+
+Any source numbers that **aren't mapped** correspond to the **same** destination number. So, seed number `10` corresponds to soil number `10`.
+
+So, the entire list of seed numbers and their corresponding soil numbers looks like this:
+
+```
+seed  soil
+0     0
+1     1
+...   ...
+48    48
+49    49
+50    52
+51    53
+...   ...
+96    98
+97    99
+98    50
+99    51
+```
+
+With this map, you can look up the soil number required for each initial seed number:
+
+* Seed number `79` corresponds to soil number `81`.
+* Seed number `14` corresponds to soil number `14`.
+* Seed number `55` corresponds to soil number `57`.
+* Seed number `13` corresponds to soil number `13`.
+
+The gardener and his team want to get started as soon as possible, so they'd like to know the closest location that needs a seed. Using these maps, find **the lowest location number that corresponds to any of the initial seeds**. To do this, you'll need to convert each seed number through other categories until you can find its corresponding **location number**. In this example, the corresponding types are:
+
+* Seed `79`, soil `81`, fertilizer `81`, water `81`, light `74`, temperature `78`, humidity `78`, **location `82`**.
+* Seed `14`, soil `14`, fertilizer `53`, water `49`, light `42`, temperature `42`, humidity `43`, **location `43`**.
+* Seed `55`, soil `57`, fertilizer `57`, water `53`, light `46`, temperature `82`, humidity `82`, **location `86`**.
+* Seed `13`, soil `13`, fertilizer `52`, water `41`, light `34`, temperature `34`, humidity `35`, **location `35`**.
+
+So, the lowest location number in this example is **`35`**.
+
+**What is the lowest location number that corresponds to any of the initial seed numbers?**
+
+### --- Part Two ---
+
+Everyone will starve if you only plant such a small number of seeds. Re-reading the almanac, it looks like the `seeds:` line actually describes **ranges of seed numbers**.
+
+The values on the initial `seeds:` line come in pairs. Within each pair, the first value is the **start** of the range and the second value is the **length** of the range. So, in the first line of the example above:
+
+```
+seeds: 79 14 55 13
+```
+
+This line describes two ranges of seed numbers to be planted in the garden. The first range starts with seed number `79` and contains `14` values: `79`, `80`, ..., `91`, `92`. The second range starts with seed number `55` and contains `13` values: `55`, `56`, ..., `66`, `67`.
+
+Now, rather than considering four seed numbers, you need to consider a total of **`27`** seed numbers.
+
+In the above example, the lowest location number can be obtained from seed number `82`, which corresponds to soil `84`, fertilizer `84`, water `84`, light `77`, temperature `45`, humidity `46`, and **location `46`**. So, the lowest location number is **`46`**.
+
+Consider all of the initial seed numbers listed in the ranges on the first line of the almanac. **What is the lowest location number that corresponds to any of the initial seed numbers?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"5","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "5", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    [seeds | list_maps] =
+      input
+      |> String.split("\n\n", trim: true)
+
+    seeds =
+      Regex.scan(~r/\d+/, seeds)
+      |> List.flatten()
+      |> Enum.map(&String.to_integer(&1))
+
+    list_maps =
+      list_maps
+      |> Enum.map(&String.split(&1, "\n", trim: true))
+      |> Enum.map(fn [_ | lines] ->
+        lines
+        |> Enum.map(fn line ->
+          line
+          |> String.split(~r/\s/, trim: true)
+          |> Enum.map(&String.to_integer(&1))
+          |> List.to_tuple()
+        end)
+      end)
+
+    [seeds | list_maps]
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  seeds: 79 14 55 13
+
+  seed-to-soil map:
+  50 98 2
+  52 50 48
+
+  soil-to-fertilizer map:
+  0 15 37
+  37 52 2
+  39 0 15
+
+  fertilizer-to-water map:
+  49 53 8
+  0 11 42
+  42 0 7
+  57 7 4
+
+  water-to-light map:
+  88 18 7
+  18 25 70
+
+  light-to-temperature map:
+  45 77 23
+  81 45 19
+  68 64 13
+
+  temperature-to-humidity map:
+  0 69 1
+  1 0 69
+
+  humidity-to-location map:
+  60 56 37
+  56 93 4
+  """
+  @expected [
+    [79, 14, 55, 13],
+    [{50, 98, 2}, {52, 50, 48}],
+    [{0, 15, 37}, {37, 52, 2}, {39, 0, 15}],
+    [{49, 53, 8}, {0, 11, 42}, {42, 0, 7}, {57, 7, 4}],
+    [{88, 18, 7}, {18, 25, 70}],
+    [{45, 77, 23}, {81, 45, 19}, {68, 64, 13}],
+    [{0, 69, 1}, {1, 0, 69}],
+    [{60, 56, 37}, {56, 93, 4}]
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    [seeds | list_maps] =
+      input
+      |> Parser.parse()
+
+    seeds
+    |> Stream.map(fn seed ->
+      list_maps
+      |> Enum.reduce(seed, fn maps, acc1 ->
+        maps
+        |> Enum.reduce_while(acc1, fn {dst, src, range}, acc2 ->
+          case acc2 in src..(src + range) do
+            true -> {:halt, dst + abs(src - acc2)}
+            false -> {:cont, acc2}
+          end
+        end)
+      end)
+    end)
+    |> Enum.min()
+
+    # Alternative using list comprehension
+
+    # for seed <- seeds, into: [] do
+    #   for maps <- list_maps, reduce: seed do
+    #     acc1 ->
+    #       maps
+    #       |> Enum.reduce_while(acc1, fn {dst, src, range}, acc2 ->
+    #         case acc2 in src..(src + range) do
+    #           true -> {:halt, dst + abs(src - acc2)}
+    #           false -> {:cont, acc2}
+    #         end
+    #       end)
+    #   end
+    # end
+    # |> Enum.min()
+  end
+end
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  seeds: 79 14 55 13
+
+  seed-to-soil map:
+  50 98 2
+  52 50 48
+
+  soil-to-fertilizer map:
+  0 15 37
+  37 52 2
+  39 0 15
+
+  fertilizer-to-water map:
+  49 53 8
+  0 11 42
+  42 0 7
+  57 7 4
+
+  water-to-light map:
+  88 18 7
+  18 25 70
+
+  light-to-temperature map:
+  45 77 23
+  81 45 19
+  68 64 13
+
+  temperature-to-humidity map:
+  0 69 1
+  1 0 69
+
+  humidity-to-location map:
+  60 56 37
+  56 93 4
+  """
+  @expected 35
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input, range) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input, range)}")
+  end
+
+  # In this part I reverse the problem, I start with the "location"
+  # and I finish looking for a "seed" that exists in the ranges.
+
+  def run(input, range) do
+    [seeds | list_maps] =
+      input
+      |> Parser.parse()
+
+    seeds =
+      seeds
+      |> Stream.chunk_every(2)
+      |> Enum.map(fn [start, len] -> start..(start + len) end)
+
+    list_maps =
+      list_maps
+      |> Enum.map(&Enum.reverse(&1))
+      |> Enum.reverse()
+
+    range
+    |> Stream.take_while(fn value ->
+      possible_seed =
+        list_maps
+        |> Enum.reduce(value, fn maps, acc1 ->
+          maps
+          |> Enum.reduce_while(acc1, fn {src, dst, range}, acc2 ->
+            case acc2 in src..(src + range) do
+              true -> {:halt, dst + abs(src - acc2)}
+              false -> {:cont, acc2}
+            end
+          end)
+        end)
+
+      seeds
+      |> Enum.reduce_while(true, fn seed_range, acc ->
+        case possible_seed in seed_range do
+          true -> {:halt, false}
+          false -> {:cont, acc}
+        end
+      end)
+    end)
+    |> Enum.max()
+    |> Kernel.+(1)
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input """
+  seeds: 79 14 55 13
+
+  seed-to-soil map:
+  50 98 2
+  52 50 48
+
+  soil-to-fertilizer map:
+  0 15 37
+  37 52 2
+  39 0 15
+
+  fertilizer-to-water map:
+  49 53 8
+  0 11 42
+  42 0 7
+  57 7 4
+
+  water-to-light map:
+  88 18 7
+  18 25 70
+
+  light-to-temperature map:
+  45 77 23
+  81 45 19
+  68 64 13
+
+  temperature-to-humidity map:
+  0 69 1
+  1 0 69
+
+  humidity-to-location map:
+  60 56 37
+  56 93 4
+  """
+  @expected 46
+
+  test "part two" do
+    assert run(@input, 1..1000) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input, 10_000_000..100_000_000)
+```
+
+<!-- livebook:{"offset":12652,"stamp":{"token":"XCP.KAUJki6Jaj35GCzwn4qqfoljk_Avqs0uXP6WgC8x08mvNs2YGYddhSD9KGjaGx8bfWO5gN16WmxJfwFmsIDMw9istsyM5-Ee8Ruzb5_BAlVBgST-EUWm","version":2}} -->
