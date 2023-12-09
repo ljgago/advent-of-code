@@ -7,6 +7,7 @@
 - [Day 5](livebooks/day05.livemd)
 - [Day 6](livebooks/day06.livemd)
 - [Day 6](livebooks/day07.livemd)
+- [Day 6](livebooks/day08.livemd)
 
 ## License
 
