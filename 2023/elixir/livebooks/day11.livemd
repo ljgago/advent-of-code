@@ -1,0 +1,471 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2023 - Day 11
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 11: Cosmic Expansion ---
+
+You continue following signs for "Hot Springs" and eventually come across an [observatory](https://en.wikipedia.org/wiki/Observatory). The Elf within turns out to be a researcher studying cosmic expansion using the giant telescope here.
+
+He doesn't know anything about the missing machine parts; he's only visiting for this research project. However, he confirms that the hot springs are the next-closest area likely to have people; he'll even take you straight there once he's done with today's observation analysis.
+
+Maybe you can help him with the analysis to speed things up?
+
+The researcher has collected a bunch of data and compiled the data into a single giant image (your puzzle input). The **image** includes **empty space** (`.`) and **galaxies** (`#`). For example:
+
+```
+...#......
+.......#..
+#.........
+..........
+......#...
+.#........
+.........#
+..........
+.......#..
+#...#.....
+```
+
+The researcher is trying to figure out the sum of the lengths of the **shortest path between every pair of galaxies**. However, there's a catch: the universe expanded in the time it took the light from those galaxies to reach the observatory.
+
+Due to something involving gravitational effects, **only some space expands**. In fact, the result is that **any rows or columns that contain no galaxies** should all actually be twice as big.
+
+In the above example, three columns and two rows contain no galaxies:
+
+```
+v  v  v
+ ...#......
+ .......#..
+ #.........
+
+> ..........<
+> ......#...
+> .#........
+> .........#
+> ..........<
+> .......#..
+> #...#.....
+> ^  ^  ^
+```
+
+These rows and columns need to be **twice as big**; the result of cosmic expansion therefore looks like this:
+
+```
+....#........
+.........#...
+#............
+.............
+.............
+........#....
+.#...........
+............#
+.............
+.............
+.........#...
+#....#.......
+```
+
+Equipped with this expanded universe, the shortest path between every pair of galaxies can be found. It can help to assign every galaxy a unique number:
+
+```
+....1........
+.........2...
+3............
+.............
+.............
+........4....
+.5...........
+............6
+.............
+.............
+.........7...
+8....9.......
+```
+
+In these 9 galaxies, there are **36 pairs**. Only count each pair once; order within the pair doesn't matter. For each pair, find any shortest path between the two galaxies using only steps that move up, down, left, or right exactly one `.` or `#` at a time. (The shortest path between two galaxies is allowed to pass through another galaxy.)
+
+For example, here is one of the shortest paths between galaxies `5` and `9`:
+
+```
+....1........
+.........2...
+3............
+.............
+.............
+........4....
+.5...........
+.##.........6
+..##.........
+...##........
+....##...7...
+8....9.......
+```
+
+This path has length **`9`** because it takes a minimum of **nine steps** to get from galaxy `5` to galaxy `9` (the eight locations marked `#` plus the step onto galaxy `9` itself). Here are some other example shortest path lengths:
+
+* Between galaxy `1` and galaxy `7`: 15
+* Between galaxy `3` and galaxy `6`: 17
+* Between galaxy `8` and galaxy `9`: 5
+
+In this example, after expanding the universe, the sum of the shortest path between all 36 pairs of galaxies is **`374`**.
+
+Expand the universe, then find the length of the shortest path between every pair of galaxies. **What is the sum of these lengths?**
+
+### --- Part Two ---
+
+The galaxies are much **older** (and thus much **farther apart**) than the researcher initially estimated.
+
+Now, instead of the expansion you did before, make each empty row or column **one million times** larger. That is, each empty row should be replaced with `1000000` empty rows, and each empty column should be replaced with `1000000` empty columns.
+
+(In the example above, if each empty row or column were merely `10` times larger, the sum of the shortest paths between every pair of galaxies would be **`1030`**. If each empty row or column were merely `100` times larger, the sum of the shortest paths between every pair of galaxies would be **`8410`**. However, your universe will need to expand far beyond these values.)
+
+Starting with the same initial image, expand the universe according to these new rules, then find the length of the shortest path between every pair of galaxies. **What is the sum of these lengths?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"11","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "11", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Tools
+
+### Code - Tools
+
+```elixir
+defmodule Tools do
+  def get_size(matrix) do
+    size_x = matrix |> hd() |> length()
+    size_y = matrix |> length()
+
+    {size_x, size_y}
+  end
+
+  def get_value(matrix, {x, y}) do
+    {size_x, size_y} = get_size(matrix)
+
+    cond do
+      x < 0 or x >= size_x ->
+        "."
+
+      y < 0 or y >= size_y ->
+        "."
+
+      true ->
+        matrix
+        |> Enum.at(y, [])
+        |> Enum.at(x, ".")
+    end
+  end
+end
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    universe =
+      input
+      |> String.split("\n", trim: true)
+      |> Enum.map(&String.codepoints(&1))
+      |> expand()
+
+    {size_x, size_y} = Tools.get_size(universe)
+
+    galaxies =
+      for y <- 0..(size_y - 1),
+          x <- 0..(size_x - 1),
+          Tools.get_value(universe, {x, y}) == "#",
+          do: {x, y}
+
+    distances =
+      for g1 <- galaxies, g2 <- galaxies, reduce: %{} do
+        dist ->
+          condition =
+            Map.has_key?(dist, [g1, g2]) or
+              Map.has_key?(dist, [g2, g1]) or
+              g1 == g2
+
+          case condition do
+            true -> dist
+            false -> Map.put(dist, [g1, g2], distance(g1, g2))
+          end
+      end
+
+    distances
+    |> Enum.map(fn {_, dist} -> dist end)
+    |> Enum.sum()
+  end
+
+  defp expand(universe) do
+    universe
+    |> duplicate_row()
+    |> transpose()
+    |> duplicate_row()
+    |> transpose()
+  end
+
+  defp duplicate_row(universe) do
+    {size_x, size_y} = Tools.get_size(universe)
+
+    universe =
+      universe
+      |> Enum.map(&Enum.join(&1))
+
+    for y <- 0..(size_y - 1) do
+      case Enum.at(universe, y) == String.duplicate(".", size_x) do
+        true -> [Enum.at(universe, y), Enum.at(universe, y)]
+        false -> Enum.at(universe, y)
+      end
+    end
+    |> List.flatten()
+    |> Enum.map(&String.codepoints(&1))
+  end
+
+  defp transpose(universe) do
+    {size_x, size_y} = Tools.get_size(universe)
+
+    for x <- 0..(size_x - 1) do
+      for y <- 0..(size_y - 1) do
+        Tools.get_value(universe, {x, y})
+      end
+    end
+  end
+
+  defp distance({x1, y1}, {x2, y2}) do
+    abs(x2 - x1) + abs(y2 - y1)
+  end
+end
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  ...#......
+  .......#..
+  #.........
+  ..........
+  ......#...
+  .#........
+  .........#
+  ..........
+  .......#..
+  #...#.....
+  """
+  @expected 374
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+The galaxy expansion is a linear function:
+
+<!-- livebook:{"force_markdown":true} -->
+
+```elixir
+f = fn x -> a * x + b end
+
+# I have x1, x2, d1 and d2
+
+a * x1 + b = d1 # (equation 1)
+a * x2 + b = d2 # (equation 2)
+```
+
+Apply Cramer's Rule:
+
+<!-- livebook:{"force_markdown":true} -->
+
+```elixir
+det = x1 - x2
+
+a = (d1 - d2) / det
+b = (x1 * d2 - x2 * d1) / det
+```
+
+<!-- livebook:{"break_markdown":true} -->
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input, times) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input, times)}")
+  end
+
+  def run(input, times) do
+    universe =
+      input
+      |> String.split("\n", trim: true)
+      |> Enum.map(&String.codepoints(&1))
+
+    # times = 1
+    x1 = 1
+    # times = 2
+    x2 = 2
+
+    d1 = universe |> sum_of_distances()
+    d2 = universe |> expand() |> sum_of_distances()
+
+    det = x1 - x2
+
+    a = ((d1 - d2) / det) |> floor()
+    b = ((x1 * d2 - x2 * d1) / det) |> floor()
+
+    # Solution
+    a * times + b
+  end
+
+  defp sum_of_distances(universe) do
+    {size_x, size_y} = Tools.get_size(universe)
+
+    galaxies =
+      for y <- 0..(size_y - 1),
+          x <- 0..(size_x - 1),
+          Tools.get_value(universe, {x, y}) == "#",
+          do: {x, y}
+
+    distances =
+      for g1 <- galaxies, g2 <- galaxies, reduce: %{} do
+        dist ->
+          condition =
+            Map.has_key?(dist, [g1, g2]) or
+              Map.has_key?(dist, [g2, g1]) or
+              g1 == g2
+
+          case condition do
+            true -> dist
+            false -> Map.put(dist, [g1, g2], distance(g1, g2))
+          end
+      end
+
+    distances
+    |> Enum.map(fn {_, dist} -> dist end)
+    |> Enum.sum()
+  end
+
+  defp expand(universe) do
+    universe
+    |> duplicate_row()
+    |> transpose()
+    |> duplicate_row()
+    |> transpose()
+  end
+
+  defp duplicate_row(universe) do
+    {size_x, size_y} = Tools.get_size(universe)
+
+    universe =
+      universe
+      |> Enum.map(&Enum.join(&1))
+
+    for y <- 0..(size_y - 1) do
+      case Enum.at(universe, y) == String.duplicate(".", size_x) do
+        true -> [Enum.at(universe, y), Enum.at(universe, y)]
+        false -> Enum.at(universe, y)
+      end
+    end
+    |> List.flatten()
+    |> Enum.map(&String.codepoints(&1))
+  end
+
+  defp transpose(universe) do
+    {size_x, size_y} = Tools.get_size(universe)
+
+    for x <- 0..(size_x - 1) do
+      for y <- 0..(size_y - 1) do
+        Tools.get_value(universe, {x, y})
+      end
+    end
+  end
+
+  defp distance({x1, y1}, {x2, y2}) do
+    abs(x2 - x1) + abs(y2 - y1)
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input """
+  ...#......
+  .......#..
+  #.........
+  ..........
+  ......#...
+  .#........
+  .........#
+  ..........
+  .......#..
+  #...#.....
+  """
+  @expected1 1030
+  @expected2 8410
+
+  test "part two" do
+    assert run(@input, 10) == @expected1
+    assert run(@input, 100) == @expected2
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input, 1_000_000)
+```
+
+<!-- livebook:{"offset":10808,"stamp":{"token":"XCP.vbyj0etkf6ykt3t7dYc9Uk85Leimo9UCW84QXBmchvoFw5fG6CDAuPrXXbkOTZ8X5LgEifogJfjtq79hjr9Z_97iZD1SkolaxycqXj6B_435nbyx7s06","version":2}} -->
