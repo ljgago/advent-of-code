@@ -27,6 +27,10 @@ Description
   KinoAOC.download_puzzle("2023", "1", System.fetch_env!("LB_AOC_SESSION"))
 ```
 
+```elixir
+IO.puts(puzzle_input)
+```
+
 ## Parser
 
 ### Code - Parser
@@ -146,4 +150,4 @@ ExUnit.run()
 PartTwo.solve(puzzle_input)
 ```
 
-<!-- livebook:{"offset":2003,"stamp":{"token":"XCP.fcDhe047nccYUpun7etHH4lwTtFAuYanC6TOUQNqbqgKjC7hoTIhV6Jn-HbxcxwclWhLcG17TMNNwmMUTH4NTpuMGLQZQXA-RWCcsc2m8cEKNyV1eiAq","version":2}} -->
+<!-- livebook:{"offset":2040,"stamp":{"token":"XCP.6PjhDx8kpyiBhGzH9s_M7Trv35gcXpS8A8JtQMszlU_I07Ri5-qO2UmOJbkKfGf32s0uYFX391wOmauKpQt9QUjoWoX0MLr9FJdXC5eMtcC5thQ25giB","version":2}} -->
