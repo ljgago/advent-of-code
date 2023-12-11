@@ -9,6 +9,7 @@
 - [Day 7](livebooks/day07.livemd)
 - [Day 8](livebooks/day08.livemd)
 - [Day 9](livebooks/day09.livemd)
+- [Day 10](livebooks/day10.livemd)
 
 ## License
 
