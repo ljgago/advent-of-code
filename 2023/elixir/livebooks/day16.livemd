@@ -1,0 +1,491 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2023 - Day 16
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 16: The Floor Will Be Lava ---
+
+With the beam of light completely focused **somewhere**, the reindeer leads you deeper still into the Lava Production Facility. At some point, you realize that the steel facility walls have been replaced with cave, and the doorways are just cave, and the floor is cave, and you're pretty sure this is actually just a giant cave.
+
+Finally, as you approach what must be the heart of the mountain, you see a bright light in a cavern up ahead. There, you discover that the beam of light you so carefully focused is emerging from the cavern wall closest to the facility and pouring all of its energy into a contraption on the opposite side.
+
+Upon closer inspection, the contraption appears to be a flat, two-dimensional square grid containing **empty space** (`.`), **mirrors** (`/` and `\`), and **splitters** (`|` and `-`).
+
+The contraption is aligned so that most of the beam bounces around the grid, but each tile on the grid converts some of the beam's light into **heat** to melt the rock in the cavern.
+
+You note the layout of the contraption (your puzzle input). For example:
+
+```
+.|...\....
+|.-.\.....
+.....|-...
+........|.
+..........
+.........\
+..../.\\..
+.-.-/..|..
+.|....-|.\
+..//.|....
+```
+
+The beam enters in the top-left corner from the left and heading to the **right**. Then, its behavior depends on what it encounters as it moves:
+
+* If the beam encounters **empty space** (`.`), it continues in the same direction.
+* If the beam encounters a **mirror** (`/` or `\`), the beam is **reflected** 90 degrees depending on the angle of the mirror. For instance, a rightward-moving beam that encounters a `/` mirror would continue **upward** in the mirror's column, while a rightward-moving beam that encounters a `\` mirror would continue **downward** from the mirror's column.
+* If the beam encounters the **pointy end of a splitter** (`|` or `-`), the beam passes through the splitter as if the splitter were **empty space**. For instance, a rightward-moving beam that encounters a `-` splitter would continue in the same direction.
+* If the beam encounters the **flat side of a splitter** (`|` or `-`), the beam is **split into two beams** going in each of the two directions the splitter's pointy ends are pointing. For instance, a rightward-moving beam that encounters a `|` splitter would split into two beams: one that continues **upward** from the splitter's column and one that continues **downward** from the splitter's column.
+
+Beams do not interact with other beams; a tile can have many beams passing through it at the same time. A tile is energized if that tile has at least one beam pass through it, reflect in it, or split in it.
+
+In the above example, here is how the beam of light bounces around the contraption:
+
+```
+>|<<<\....
+|v-.\^....
+.v...|->>>
+.v...v^.|.
+.v...v^...
+.v...v^..\
+.v../2\\..
+<->-/vv|..
+.|<<<2-|.\
+.v//.|.v..
+```
+
+Beams are only shown on empty tiles; arrows indicate the direction of the beams. If a tile contains beams moving in multiple directions, the number of distinct directions is shown instead. Here is the same diagram but instead only showing whether a tile is **energized** (`#`) or not (`.`):
+
+```
+######....
+.#...#....
+.#...#####
+.#...##...
+.#...##...
+.#...##...
+.#..####..
+########..
+.#######..
+.#...#.#..
+```
+
+Ultimately, in this example, **`46`** tiles become **energized**.
+
+The light isn't energizing enough tiles to produce lava; to debug the contraption, you need to start by analyzing the current situation. With the beam starting in the top-left heading right, **how many tiles end up being energized?**
+
+### --- Part Two ---
+
+As you try to work out what might be wrong, the reindeer tugs on your shirt and leads you to a nearby control panel. There, a collection of buttons lets you align the contraption so that the beam enters from **any edge tile** and heading away from that edge. (You can choose either of two directions for the beam if it starts on a corner; for instance, if the beam starts in the bottom-right corner, it can start heading either left or upward.)
+
+So, the beam could start on any tile in the top row (heading downward), any tile in the bottom row (heading upward), any tile in the leftmost column (heading right), or any tile in the rightmost column (heading left). To produce lava, you need to find the configuration that **energizes as many tiles as possible**.
+
+In the above example, this can be achieved by starting the beam in the fourth tile from the left in the top row:
+
+```
+.|<2<\....
+|v-v\^....
+.v.v.|->>>
+.v.v.v^.|.
+.v.v.v^...
+.v.v.v^..\
+.v.v/2\\..
+<-2-/vv|..
+.|<<<2-|.\
+.v//.|.v..
+```
+
+Using this configuration, **`51`** tiles are energized:
+
+```
+.#####....
+.#.#.#....
+.#.#.#####
+.#.#.##...
+.#.#.##...
+.#.#.##...
+.#.#####..
+########..
+.#######..
+.#...#.#..
+```
+
+Find the initial beam configuration that energizes the largest number of tiles; **how many tiles are energized in that configuration?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"16","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "16", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Tools
+
+### Code - Tools
+
+```elixir
+defmodule Tools do
+  def get_size(matrix) do
+    size_x = matrix |> hd() |> length()
+    size_y = matrix |> length()
+
+    {size_x, size_y}
+  end
+
+  def get_value(matrix, {x, y}) do
+    {size_x, size_y} = get_size(matrix)
+
+    cond do
+      x < 0 or x >= size_x ->
+        ""
+
+      y < 0 or y >= size_y ->
+        ""
+
+      true ->
+        matrix
+        |> Enum.at(y, [])
+        |> Enum.at(x, "")
+    end
+  end
+end
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    matrix =
+      input
+      |> String.split("\n")
+      |> Enum.map(&String.codepoints(&1))
+
+    {:ok, path} = Agent.start(&MapSet.new/0)
+
+    result =
+      matrix
+      |> move({0, 0}, "right", path)
+      |> Agent.get(fn path_set -> path_set end)
+      |> Enum.map(fn {point, _} -> point end)
+      |> Enum.uniq()
+      |> Enum.count()
+
+    Agent.stop(path)
+
+    result
+  end
+
+  def move(matrix, {x, y} = point, direction, path) do
+    value = Tools.get_value(matrix, point)
+
+    has_point? =
+      case value do
+        "" ->
+          false
+
+        _ ->
+          path
+          |> Agent.get_and_update(fn path_set ->
+            {
+              MapSet.member?(path_set, {point, direction}),
+              MapSet.put(path_set, {point, direction})
+            }
+          end)
+      end
+
+    cond do
+      value == "" or has_point? ->
+        path
+
+      direction == "left" and value in [".", "-"] ->
+        move(matrix, {x - 1, y}, direction, path)
+
+      direction == "right" and value in [".", "-"] ->
+        move(matrix, {x + 1, y}, direction, path)
+
+      direction == "up" and value in [".", "|"] ->
+        move(matrix, {x, y - 1}, direction, path)
+
+      direction == "down" and value in [".", "|"] ->
+        move(matrix, {x, y + 1}, direction, path)
+
+      direction in ["left", "right"] and value == "|" ->
+        move(matrix, {x, y - 1}, "up", path)
+        move(matrix, {x, y + 1}, "down", path)
+
+      direction in ["up", "down"] and value == "-" ->
+        move(matrix, {x - 1, y}, "left", path)
+        move(matrix, {x + 1, y}, "right", path)
+
+      direction == "left" and value == "/" ->
+        move(matrix, {x, y + 1}, "down", path)
+
+      direction == "left" and value == "\\" ->
+        move(matrix, {x, y - 1}, "up", path)
+
+      direction == "right" and value == "/" ->
+        move(matrix, {x, y - 1}, "up", path)
+
+      direction == "right" and value == "\\" ->
+        move(matrix, {x, y + 1}, "down", path)
+
+      direction == "up" and value == "/" ->
+        move(matrix, {x + 1, y}, "right", path)
+
+      direction == "up" and value == "\\" ->
+        move(matrix, {x - 1, y}, "left", path)
+
+      direction == "down" and value == "/" ->
+        move(matrix, {x - 1, y}, "left", path)
+
+      direction == "down" and value == "\\" ->
+        move(matrix, {x + 1, y}, "right", path)
+
+      true ->
+        path
+    end
+  end
+end
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  .|...\\....
+  |.-.\\.....
+  .....|-...
+  ........|.
+  ..........
+  .........\\
+  ..../.\\\\..
+  .-.-/..|..
+  .|....-|.\\
+  ..//.|....
+  """
+  @expected 46
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    matrix =
+      input
+      |> String.split("\n")
+      |> Enum.map(&String.codepoints(&1))
+
+    {:ok, path} = Agent.start_link(&MapSet.new/0)
+
+    result =
+      matrix
+      |> get_edge_points()
+      |> Enum.map(fn {point, direction} ->
+        matrix
+        |> move(point, direction, path)
+        |> Agent.get_and_update(fn path_set -> {path_set, MapSet.new()} end)
+        |> Enum.map(fn {point, _} -> point end)
+        |> Enum.uniq()
+        |> Enum.count()
+      end)
+      |> Enum.max()
+
+    Agent.stop(path)
+
+    result
+  end
+
+  def move(matrix, {x, y} = point, direction, path) do
+    value = Tools.get_value(matrix, point)
+
+    has_point? =
+      case value do
+        "" ->
+          false
+
+        _ ->
+          path
+          |> Agent.get_and_update(fn path_set ->
+            {
+              MapSet.member?(path_set, {point, direction}),
+              MapSet.put(path_set, {point, direction})
+            }
+          end)
+      end
+
+    cond do
+      value == "" or has_point? ->
+        path
+
+      direction == "left" and value in [".", "-"] ->
+        move(matrix, {x - 1, y}, direction, path)
+
+      direction == "right" and value in [".", "-"] ->
+        move(matrix, {x + 1, y}, direction, path)
+
+      direction == "up" and value in [".", "|"] ->
+        move(matrix, {x, y - 1}, direction, path)
+
+      direction == "down" and value in [".", "|"] ->
+        move(matrix, {x, y + 1}, direction, path)
+
+      direction in ["left", "right"] and value == "|" ->
+        move(matrix, {x, y - 1}, "up", path)
+        move(matrix, {x, y + 1}, "down", path)
+
+      direction in ["up", "down"] and value == "-" ->
+        move(matrix, {x - 1, y}, "left", path)
+        move(matrix, {x + 1, y}, "right", path)
+
+      direction == "left" and value == "/" ->
+        move(matrix, {x, y + 1}, "down", path)
+
+      direction == "left" and value == "\\" ->
+        move(matrix, {x, y - 1}, "up", path)
+
+      direction == "right" and value == "/" ->
+        move(matrix, {x, y - 1}, "up", path)
+
+      direction == "right" and value == "\\" ->
+        move(matrix, {x, y + 1}, "down", path)
+
+      direction == "up" and value == "/" ->
+        move(matrix, {x + 1, y}, "right", path)
+
+      direction == "up" and value == "\\" ->
+        move(matrix, {x - 1, y}, "left", path)
+
+      direction == "down" and value == "/" ->
+        move(matrix, {x - 1, y}, "left", path)
+
+      direction == "down" and value == "\\" ->
+        move(matrix, {x + 1, y}, "right", path)
+
+      true ->
+        path
+    end
+  end
+
+  def get_edge_points(matrix) do
+    {size_x, size_y} = Tools.get_size(matrix)
+
+    points1 =
+      for x <- 0..(size_x - 1),
+          y <- 0..(size_y - 1),
+          x == 0 or x == size_x - 1,
+          into: MapSet.new() do
+        cond do
+          x == 0 ->
+            {{x, y}, "right"}
+
+          true ->
+            {{x, y}, "left"}
+        end
+      end
+
+    points2 =
+      for x <- 0..(size_x - 1),
+          y <- 0..(size_y - 1),
+          y == 0 or x == size_y - 1,
+          into: MapSet.new() do
+        cond do
+          y == 0 ->
+            {{x, y}, "down"}
+
+          true ->
+            {{x, y}, "up"}
+        end
+      end
+
+    MapSet.union(points1, points2)
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input """
+  .|...\\....
+  |.-.\\.....
+  .....|-...
+  ........|.
+  ..........
+  .........\\
+  ..../.\\\\..
+  .-.-/..|..
+  .|....-|.\\
+  ..//.|....
+  """
+  @expected 51
+
+  test "part two" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":12873,"stamp":{"token":"XCP.R9lFm4FwozoNg6cIgx1LFQngFmxqMYuDKz5wU8DNw4IwXrhz56-dGevS8A8jJFhCw9OGYvTXCxinea0pP16TH6FXdk8r54JfdvGuXf8BgaQBZpenJXMi","version":2}} -->
