@@ -1,0 +1,510 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2023 - Day 12
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 12: Hot Springs ---
+
+You finally reach the hot springs! You can see steam rising from secluded areas attached to the primary, ornate building.
+
+As you turn to enter, the [researcher](https://adventofcode.com/2023/day/11) stops you. "Wait - I thought you were looking for the hot springs, weren't you?" You indicate that this definitely looks like hot springs to you.
+
+"Oh, sorry, common mistake! This is actually the [onsen](https://en.wikipedia.org/wiki/Onsen)! The hot springs are next door."
+
+You look in the direction the researcher is pointing and suddenly notice the massive metal helixes towering overhead. "This way!"
+
+It only takes you a few more steps to reach the main gate of the massive fenced-off area containing the springs. You go through the gate and into a small administrative building.
+
+"Hello! What brings you to the hot springs today? Sorry they're not very hot right now; we're having a **lava shortage** at the moment." You ask about the missing machine parts for Desert Island.
+
+"Oh, all of Gear Island is currently offline! Nothing is being manufactured at the moment, not until we get more lava to heat our forges. And our springs. The springs aren't very springy unless they're hot!"
+
+"Say, could you go up and see why the lava stopped flowing? The springs are too cold for normal operation, but we should be able to find one springy enough to launch **you** up there!"
+
+There's just one problem - many of the springs have fallen into disrepair, so they're not actually sure which springs would even be **safe** to use! Worse yet, their **condition records of which springs are damaged** (your puzzle input) are also damaged! You'll need to help them repair the damaged records.
+
+In the giant field just outside, the springs are arranged into **rows**. For each row, the condition records show every spring and whether it is **operational** (`.`) or **damaged** (`#`). This is the part of the condition records that is itself damaged; for some springs, it is simply **unknown** (`?`) whether the spring is operational or damaged.
+
+However, the engineer that produced the condition records also duplicated some of this information in a different format! After the list of springs for a given row, the size of each **contiguous group of damaged springs** is listed in the order those groups appear in the row. This list always accounts for every damaged spring, and each number is the entire size of its contiguous group (that is, groups are always separated by at least one operational spring: `####` would always be `4`, never `2,2`).
+
+So, condition records with no unknown spring conditions might look like this:
+
+```
+#.#.### 1,1,3
+.#...#....###. 1,1,3
+.#.###.#.###### 1,3,1,6
+####.#...#... 4,1,1
+#....######..#####. 1,6,5
+.###.##....# 3,2,1
+```
+
+However, the condition records are partially damaged; some of the springs' conditions are actually **unknown** (`?`). For example:
+
+```
+???.### 1,1,3
+.??..??...?##. 1,1,3
+?#?#?#?#?#?#?#? 1,3,1,6
+????.#...#... 4,1,1
+????.######..#####. 1,6,5
+?###???????? 3,2,1
+```
+
+Equipped with this information, it is your job to figure out **how many different arrangements** of operational and broken springs fit the given criteria in each row.
+
+In the first line (`???.### 1,1,3`), there is exactly **one** way separate groups of one, one, and three broken springs (in that order) can appear in that row: the first three unknown springs must be broken, then operational, then broken (`#.#`), making the whole row `#.#.###`.
+
+The second line is more interesting: `.??..??...?##. 1,1,3` could be a total of **four** different arrangements. The last `?` must always be broken (to satisfy the final contiguous group of three broken springs), and each `??` must hide exactly one of the two broken springs. (Neither `??` could be both broken springs or they would form a single contiguous group of two; if that were true, the numbers afterward would have been `2,3` instead.) Since each `??` can either be `#.` or `.#`, there are four possible arrangements of springs.
+
+The last line is actually consistent with **ten** different arrangements! Because the first number is `3`, the first and second `?` must both be `.` (if either were `#`, the first number would have to be `4` or higher). However, the remaining run of unknown spring conditions have many different ways they could hold groups of two and one broken springs:
+
+```
+?###???????? 3,2,1
+.###.##.#...
+.###.##..#..
+.###.##...#.
+.###.##....#
+.###..##.#..
+.###..##..#.
+.###..##...#
+.###...##.#.
+.###...##..#
+.###....##.#
+```
+
+In this example, the number of possible arrangements for each row is:
+
+* `???.### 1,1,3` - **`1`** arrangement
+* `.??..??...?##. 1,1,3` - **`4`** arrangements
+* `?#?#?#?#?#?#?#? 1,3,1,6` - **`1`** arrangement
+* `????.#...#... 4,1,1` - **`1`** arrangement
+* `????.######..#####. 1,6,5` - **`4`** arrangements
+* `?###???????? 3,2,1` - **`10`** arrangements
+
+Adding all of the possible arrangement counts together produces a total of **`21`** arrangements.
+
+For each row, count all of the different arrangements of operational and broken springs that meet the given criteria. **What is the sum of those counts?**
+
+### --- Part Two ---
+
+As you look out at the field of springs, you feel like there are way more springs than the condition records list. When you examine the records, you discover that they were actually **folded up** this whole time!
+
+To **unfold the records**, on each row, replace the list of spring conditions with five copies of itself (separated by `?`) and replace the list of contiguous groups of damaged springs with five copies of itself (separated by `,`).
+
+So, this row:
+
+```
+.# 1
+```
+
+Would become:
+
+```
+.#?.#?.#?.#?.# 1,1,1,1,1
+```
+
+The first line of the above example would become:
+
+```
+???.###????.###????.###????.###????.### 1,1,3,1,1,3,1,1,3,1,1,3,1,1,3
+```
+
+In the above example, after unfolding, the number of possible arrangements for some rows is now much larger:
+
+* `???.### 1,1,3` - **`1`** arrangement
+* `.??..??...?##. 1,1,3` - **`16384`** arrangements
+* `?#?#?#?#?#?#?#? 1,3,1,6` - **`1`** arrangement
+* `????.#...#... 4,1,1` - **`16`** arrangements
+* `????.######..#####. 1,6,5` - **`2500`** arrangements
+* `?###???????? 3,2,1` - **`506250`** arrangements
+
+After unfolding, adding all of the possible arrangement counts together produces **`525152`**.
+
+Unfold your condition records; **what is the new sum of possible arrangement counts?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"12","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "12", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn line ->
+      [records, groups] = line |> String.split(" ", trim: true)
+
+      groups =
+        groups
+        |> String.split(",", trim: true)
+        |> Enum.map(&String.to_integer(&1))
+
+      [records, groups]
+    end)
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  ???.### 1,1,3
+  .??..??...?##. 1,1,3
+  ?#?#?#?#?#?#?#? 1,3,1,6
+  ????.#...#... 4,1,1
+  ????.######..#####. 1,6,5
+  ?###???????? 3,2,1
+  """
+  @expected [
+    ["???.###", [1, 1, 3]],
+    [".??..??...?##.", [1, 1, 3]],
+    ["?#?#?#?#?#?#?#?", [1, 3, 1, 6]],
+    ["????.#...#...", [4, 1, 1]],
+    ["????.######..#####.", [1, 6, 5]],
+    ["?###????????", [3, 2, 1]]
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  import Bitwise
+
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    input
+    |> Parser.parse()
+    |> Enum.map(fn [records, groups] ->
+      damaged_has = Regex.scan(~r/#/, records) |> length()
+      unknown_has = Regex.scan(~r/\?/, records) |> length()
+      damaged_total = groups |> Enum.sum()
+
+      ones = abs(damaged_total - damaged_has)
+      zeros = abs(unknown_has - ones)
+
+      generate_values(zeros, ones)
+      |> Enum.map(&replace_bits(&1, records))
+      |> Enum.map(&valid?(&1, groups))
+      |> Enum.filter(& &1)
+      |> Enum.count()
+    end)
+    |> Enum.sum()
+  end
+
+  def replace_bits(bits, records) do
+    bits
+    |> String.replace("0", ".")
+    |> String.replace("1", "#")
+    |> String.codepoints()
+    |> Enum.reduce(records, fn bit, rec ->
+      String.replace(rec, "?", bit, global: false)
+    end)
+  end
+
+  def valid?(records, groups) do
+    left = records |> String.split(".", trim: true)
+    right = groups |> Enum.map(&String.duplicate("#", &1))
+
+    left == right
+  end
+
+  def generate_values(zeros, ones) do
+    # x =
+    #   (String.duplicate("0", zeros) <> String.duplicate("1", ones))
+    #   |> String.to_integer(2)
+
+    bits = ones + zeros
+
+    for(
+      n <- 0..(2 ** bits - 1),
+      do: n
+    )
+    |> Enum.map(fn number ->
+      number
+      |> Integer.to_string(2)
+      |> String.pad_leading(bits, "0")
+    end)
+  end
+
+  # def generate_values(zeros, ones) do
+  #   bits = ones + zeros
+
+  #   numbers = for n <- 0..(2 ** bits - 1), count_ones(n) == ones, do: n
+
+  #   numbers
+  #   |> Enum.map(fn number ->
+  #     number
+  #     |> Integer.to_string(2)
+  #     |> String.pad_leading(bits, "0")
+  #   end)
+  # end
+
+  def circular_shift(bits, x, n) do
+    2 ** bits - 1 &&& (x <<< n ||| x >>> (bits - n))
+  end
+
+  def count_ones(number) do
+    number
+    |> Integer.to_string(2)
+    |> String.codepoints()
+    |> Enum.frequencies()
+    |> Map.get("1")
+  end
+
+  def factorial(0), do: 1
+
+  def factorial(n) when n > 0 do
+    Enum.reduce(1..n, &*/2)
+  end
+
+  def combinatoric(n, r) do
+    div(factorial(n), factorial(r) * factorial(n - r))
+  end
+
+  def permutation(n, array) do
+    num = factorial(n)
+
+    den =
+      array
+      |> Enum.map(&factorial(&1))
+      |> Enum.product()
+
+    num / den
+  end
+
+  def permutations([]), do: [[]]
+
+  def permutations(list) do
+    for elem <- list,
+        rest <- permutations(list -- [elem]),
+        into: MapSet.new(),
+        do: [elem | rest]
+  end
+end
+```
+
+```elixir
+PartOne.combinatoric(9, 4)
+```
+
+```elixir
+PartOne.generate_values(5, 4) |> length()
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @zeros 1
+  @ones 2
+  @expected ["011", "101", "110"]
+
+  test "generate values" do
+    assert generate_values(@zeros, @ones) == @expected
+  end
+
+  @input """
+  ???.### 1,1,3
+  .??..??...?##. 1,1,3
+  ?#?#?#?#?#?#?#? 1,3,1,6
+  ????.#...#... 4,1,1
+  ????.######..#####. 1,6,5
+  ?###???????? 3,2,1
+  """
+  @expected 21
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  import Bitwise
+
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    input
+    |> Parser.parse()
+    |> Enum.map(fn [records, groups] ->
+      damaged_has = Regex.scan(~r/#/, records) |> length()
+      unknown_has = Regex.scan(~r/\?/, records) |> length()
+      damaged_total = groups |> Enum.sum()
+
+      ones = abs(damaged_total - damaged_has)
+      zeros = abs(unknown_has - ones)
+
+      # generate_values(zeros, ones)
+      permutations()
+      |> Enum.map(&replace_bits(&1, records))
+      |> Enum.map(&valid?(&1, groups))
+      |> Enum.filter(& &1)
+      |> Enum.count()
+    end)
+    |> Enum.sum()
+  end
+
+  def replace_bits(bits, records) do
+    bits
+    |> String.replace("0", ".")
+    |> String.replace("1", "#")
+    |> String.codepoints()
+    |> Enum.reduce(records, fn bit, rec ->
+      String.replace(rec, "?", bit, global: false)
+    end)
+  end
+
+  def valid?(records, groups) do
+    left = records |> String.split(".", trim: true)
+    right = groups |> Enum.map(&String.duplicate("#", &1))
+
+    left == right
+  end
+
+  def generate_values(zeros, ones) do
+    # x =
+    #   (String.duplicate("0", zeros) <> String.duplicate("1", ones))
+    #   |> String.to_integer(2)
+
+    bits = ones + zeros
+
+    for(
+      n <- 0..(2 ** bits - 1),
+      do: n
+    )
+    |> Enum.map(fn number ->
+      number
+      |> Integer.to_string(2)
+      |> String.pad_leading(bits, "0")
+    end)
+  end
+
+  def circular_shift(bits, x, n) do
+    2 ** bits - 1 &&& (x <<< n ||| x >>> (bits - n))
+  end
+
+  # def factorial(0), do: 1
+
+  # def factorial(n) when n > 0 do
+  #   Enum.reduce(1..n, &*/2)
+  # end
+
+  # def combinatoric(n, r) do
+  #   factorial(n) / (factorial(r) * factorial(n - r))
+  # end
+
+  # def permutation(n, array) do
+  #   num = factorial(n)
+
+  #   den =
+  #     array
+  #     |> Enum.map(&factorial(&1))
+  #     |> Enum.product()
+
+  #   num / den
+  # end
+
+  def permutations([]), do: [[]]
+
+  def permutations(list) do
+    for elem <- list,
+        rest <- permutations(list -- [elem]),
+        into: MapSet.new(),
+        do: [elem | rest]
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input ""
+  @expected nil
+
+  test "part two" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":13804,"stamp":{"token":"XCP.H-4tCh9Aw-RdtHT-b9ExiGVfLIhgv6aU2uAlR_GlIfjJdVShdYZGPyxOa0ilVZSzpJsu3Dl2B8q4ll10APUEd2LFPUMiowkil2jeM44cbiFfzFjh5V80","version":2}} -->
