@@ -1,0 +1,583 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2023 - Day 13
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 13: Point of Incidence ---
+
+With your help, the hot springs team locates an appropriate spring which launches you neatly and precisely up to the edge of **Lava Island**.
+
+There's just one problem: you don't see any **lava**.
+
+You **do** see a lot of ash and igneous rock; there are even what look like gray mountains scattered around. After a while, you make your way to a nearby cluster of mountains only to discover that the valley between them is completely full of large **mirrors**. Most of the mirrors seem to be aligned in a consistent way; perhaps you should head in that direction?
+
+As you move through the valley of mirrors, you find that several of them have fallen from the large metal frames keeping them in place. The mirrors are extremely flat and shiny, and many of the fallen mirrors have lodged into the ash at strange angles. Because the terrain is all one color, it's hard to tell where it's safe to walk or where you're about to run into a mirror.
+
+You note down the patterns of ash (`.`) and rocks (`#`) that you see as you walk (your puzzle input); perhaps by carefully analyzing these patterns, you can figure out where the mirrors are!
+
+For example:
+
+```
+#.##..##.
+..#.##.#.
+##......#
+##......#
+..#.##.#.
+..##..##.
+#.#.##.#.
+
+#...##..#
+#....#..#
+..##..###
+#####.##.
+#####.##.
+..##..###
+#....#..#
+```
+
+To find the reflection in each pattern, you need to find a perfect reflection across either a horizontal line between two rows or across a vertical line between two columns.
+
+In the first pattern, the reflection is across a vertical line between two columns; arrows on each of the two columns point at the line between the columns:
+
+```
+123456789
+    ><   
+#.##..##.
+..#.##.#.
+##......#
+##......#
+..#.##.#.
+..##..##.
+#.#.##.#.
+    ><   
+123456789
+```
+
+In this pattern, the line of reflection is the vertical line between columns 5 and 6. Because the vertical line is not perfectly in the middle of the pattern, part of the pattern (column 1) has nowhere to reflect onto and can be ignored; every other column has a reflected column within the pattern and must match exactly: column 2 matches column 9, column 3 matches 8, 4 matches 7, and 5 matches 6.
+
+The second pattern reflects across a horizontal line instead:
+
+```
+1 #...##..# 1
+2 #....#..# 2
+3 ..##..### 3
+4v#####.##.v4
+5^#####.##.^5
+6 ..##..### 6
+7 #....#..# 7
+```
+
+This pattern reflects across the horizontal line between rows 4 and 5. Row 1 would reflect with a hypothetical row 8, but since that's not in the pattern, row 1 doesn't need to match anything. The remaining rows match: row 2 matches row 7, row 3 matches row 6, and row 4 matches row 5.
+
+To **summarize** your pattern notes, add up **the number of columns** to the left of each vertical line of reflection; to that, also add **100 multiplied by the number of rows** above each horizontal line of reflection. In the above example, the first pattern's vertical line has 5 columns to its left and the second pattern's horizontal line has 4 rows above it, a total of **`405`**.
+
+Find the line of reflection in each of the patterns in your notes. **What number do you get after summarizing all of your notes?**
+
+### --- Part Two ---
+
+You resume walking through the valley of mirrors and - **SMACK!** - run directly into one. Hopefully nobody was watching, because that must have been pretty embarrassing.
+
+Upon closer inspection, you discover that every mirror has exactly one **smudge**: exactly one `.` or `#` should be the opposite type.
+
+In each pattern, you'll need to locate and fix the smudge that causes a **different reflection line** to be valid. (The old reflection line won't necessarily continue being valid after the smudge is fixed.)
+
+Here's the above example again:
+
+```
+#.##..##.
+..#.##.#.
+##......#
+##......#
+..#.##.#.
+..##..##.
+#.#.##.#.
+
+#...##..#
+#....#..#
+..##..###
+#####.##.
+#####.##.
+..##..###
+#....#..#
+```
+
+The first pattern's smudge is in the top-left corner. If the top-left `#` were instead `.`, it would have a different, horizontal line of reflection:
+
+```
+1 ..##..##. 1
+2 ..#.##.#. 2
+3v##......#v3
+4^##......#^4
+5 ..#.##.#. 5
+6 ..##..##. 6
+7 #.#.##.#. 7
+```
+
+With the smudge in the top-left corner repaired, a new horizontal line of reflection between rows 3 and 4 now exists. Row 7 has no corresponding reflected row and can be ignored, but every other row matches exactly: row 1 matches row 6, row 2 matches row 5, and row 3 matches row 4.
+
+In the second pattern, the smudge can be fixed by changing the fifth symbol on row 2 from `.` to `#`:
+
+```
+1v#...##..#v1
+2^#...##..#^2
+3 ..##..### 3
+4 #####.##. 4
+5 #####.##. 5
+6 ..##..### 6
+7 #....#..# 7
+```
+
+Now, the pattern has a different horizontal line of reflection between rows 1 and 2.
+
+Summarize your notes as before, but instead use the new different reflection lines. In this example, the first pattern's new horizontal line has 3 rows above it and the second pattern's new horizontal line has 1 row above it, summarizing to the value **`400`**.
+
+In each pattern, fix the smudge and find the different line of reflection. **What number do you get after summarizing the new reflection line in each pattern in your notes?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":{"assign_to":"puzzle_input","day":"13","session_secret":"AOC_SESSION","year":"2023"},"chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "13", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n\n", trim: true)
+    |> Enum.map(fn mirror ->
+      mirror
+      # |> String.replace([".", "#"], fn x -> if x == ".", do: "0", else: "1" end)
+      |> String.split("\n", trim: true)
+    end)
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  #.##..##.
+  ..#.##.#.
+  ##......#
+  ##......#
+  ..#.##.#.
+  ..##..##.
+  #.#.##.#.
+
+  #...##..#
+  #....#..#
+  ..##..###
+  #####.##.
+  #####.##.
+  ..##..###
+  #....#..#
+  """
+  @expected [
+    [
+      "#.##..##.",
+      "..#.##.#.",
+      "##......#",
+      "##......#",
+      "..#.##.#.",
+      "..##..##.",
+      "#.#.##.#."
+    ],
+    [
+      "#...##..#",
+      "#....#..#",
+      "..##..###",
+      "#####.##.",
+      "#####.##.",
+      "..##..###",
+      "#....#..#"
+    ]
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    input
+    |> Parser.parse()
+    |> Enum.map(fn matrix ->
+      result =
+        matrix
+        |> find_mirror()
+
+      case result do
+        {true, row} ->
+          100 * row
+
+        _ ->
+          result =
+            matrix
+            |> transpose()
+            |> find_mirror()
+
+          case result do
+            {true, column} -> column
+            _ -> 0
+          end
+      end
+    end)
+    |> Enum.sum()
+  end
+
+  def find_mirror(matrix) do
+    size = matrix |> length()
+
+    matrix
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.with_index()
+    |> Enum.reduce([], fn {[left, right], i}, indexes ->
+      case left == right do
+        true -> [i | indexes]
+        false -> indexes
+      end
+    end)
+    |> Enum.reverse()
+    |> Enum.map(fn index ->
+      valid? =
+        for i <- 0..(size - 1),
+            i < index and index * 2 + 1 - i < size do
+          Enum.at(matrix, i) == Enum.at(matrix, index * 2 + 1 - i)
+        end
+        |> Enum.all?(&(&1 == true))
+
+      case valid? do
+        true -> {true, index + 1}
+        false -> {false, 0}
+      end
+    end)
+    |> Enum.filter(fn {v, _} -> v end)
+    |> List.first({false, 0})
+  end
+
+  def transpose(matrix) do
+    size_y = matrix |> length()
+    size_x = matrix |> hd() |> String.length()
+
+    for x <- 0..(size_x - 1) do
+      for y <- 0..(size_y - 1), into: "" do
+        matrix
+        |> Enum.at(y, "")
+        |> String.at(x)
+      end
+    end
+  end
+end
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input1 [
+    "#.##..##.",
+    "..#.##.#.",
+    "##......#",
+    "##......#",
+    "..#.##.#.",
+    "..##..##.",
+    "#.#.##.#."
+  ]
+  @expected1 {false, 0}
+
+  @input2 [
+    "#...##..#",
+    "#....#..#",
+    "..##..###",
+    "#####.##.",
+    "#####.##.",
+    "..##..###",
+    "#....#..#"
+  ]
+  @expected2 {true, 4}
+
+  test "find mirror" do
+    assert find_mirror(@input1) == @expected1
+    assert find_mirror(@input2) == @expected2
+  end
+
+  @input """
+  #.##..##.
+  ..#.##.#.
+  ##......#
+  ##......#
+  ..#.##.#.
+  ..##..##.
+  #.#.##.#.
+
+  #...##..#
+  #....#..#
+  ..##..###
+  #####.##.
+  #####.##.
+  ..##..###
+  #....#..#
+  """
+  @expected 405
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  import Bitwise
+
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    input
+    |> Parser.parse()
+    |> Enum.map(fn matrix ->
+      result =
+        matrix
+        |> find_mirror()
+
+      case result do
+        {true, row} ->
+          100 * row
+
+        _ ->
+          result =
+            matrix
+            |> transpose()
+            |> find_mirror()
+
+          case result do
+            {true, column} -> column
+            _ -> 0
+          end
+      end
+    end)
+    |> Enum.sum()
+  end
+
+  def find_mirror(matrix) do
+    size = matrix |> length()
+    {:ok, agent} = Agent.start_link(fn -> false end)
+
+    matrix
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.with_index()
+    |> Enum.reduce([], fn {[left, right], index}, indexes ->
+      case left == right do
+        true ->
+          [{index, false} | indexes]
+
+        false ->
+          case difference_of_one?(left, right, nil) do
+            true -> [{index, true} | indexes]
+            false -> indexes
+          end
+      end
+    end)
+    |> Enum.reverse()
+    |> Enum.map(fn {index, diff?} ->
+      Agent.update(agent, fn _ -> false end)
+
+      valid? =
+        for i <- 0..(size - 1),
+            i <= index and index * 2 + 1 - i < size do
+          left = Enum.at(matrix, i)
+          right = Enum.at(matrix, index * 2 + 1 - i)
+
+          cond do
+            i == index and diff? == true ->
+              difference_of_one?(left, right, agent)
+
+            i == index and diff? == false ->
+              left == right
+
+            i != index and diff? == false ->
+              left == right or difference_of_one?(left, right, agent)
+
+            true ->
+              left == right
+          end
+        end
+        |> then(fn arr -> [Agent.get(agent, fn v -> v end) | arr] end)
+        |> Enum.all?(&(&1 == true))
+
+      case valid? do
+        true -> {true, index + 1}
+        false -> {false, 0}
+      end
+    end)
+    |> Enum.filter(fn {v, _} -> v end)
+    |> List.first({false, 0})
+  end
+
+  def transpose(matrix) do
+    size_y = matrix |> length()
+    size_x = matrix |> hd() |> String.length()
+
+    for x <- 0..(size_x - 1) do
+      for y <- 0..(size_y - 1), into: "" do
+        matrix
+        |> Enum.at(y, "")
+        |> String.at(x)
+      end
+    end
+  end
+
+  def difference_of_one?(left, right, agent) do
+    left =
+      left
+      |> String.replace([".", "#"], &if(&1 == ".", do: "0", else: "1"))
+      |> String.to_integer(2)
+
+    right =
+      right
+      |> String.replace([".", "#"], &if(&1 == ".", do: "0", else: "1"))
+      |> String.to_integer(2)
+
+    result =
+      bxor(left, right)
+      |> Integer.to_string(2)
+      |> String.codepoints()
+      |> Enum.frequencies()
+
+    case agent do
+      nil ->
+        Map.get(result, "1") == 1
+
+      _ ->
+        val = Agent.get(agent, fn v -> v end)
+        result = Map.get(result, "1") == 1
+
+        cond do
+          val == true ->
+            false
+
+          result == true ->
+            Agent.update(agent, fn _ -> true end)
+            result
+
+          true ->
+            result
+        end
+    end
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input_a "#...##..#"
+  @input_b "#....#..#"
+
+  test "difference of one" do
+    assert difference_of_one?(@input_a, @input_b, nil) == true
+  end
+
+  @input """
+  #.##..##.
+  ..#.##.#.
+  ##......#
+  ##......#
+  ..#.##.#.
+  ..##..##.
+  #.#.##.#.
+
+  #...##..#
+  #....#..#
+  ..##..###
+  #####.##.
+  #####.##.
+  ..##..###
+  #....#..#
+  """
+  @expected 400
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":13198,"stamp":{"token":"XCP.d11oxtepIcIEgH_9-ve7uAxsL_AGQwNq6E5A9UIz8NeqnusCm9lY84EyY_V-cQxnil7dT0DLCNjmHWth014IwSEyJBCsOxJ9pIfM_5-jPYrcxifR2d1x","version":2}} -->
