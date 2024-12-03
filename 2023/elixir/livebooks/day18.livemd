@@ -1,0 +1,495 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2023 - Day 18 (incomplete)
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 18: Lavaduct Lagoon ---
+
+Thanks to your efforts, the machine parts factory is one of the first factories up and running since the lavafall came back. However, to catch up with the large backlog of parts requests, the factory will also need a **large supply of lava** for a while; the Elves have already started creating a large lagoon nearby for this purpose.
+
+However, they aren't sure the lagoon will be big enough; they've asked you to take a look at the **dig plan** (your puzzle input). For example:
+
+```
+R 6 (#70c710)
+D 5 (#0dc571)
+L 2 (#5713f0)
+D 2 (#d2c081)
+R 2 (#59c680)
+D 2 (#411b91)
+L 5 (#8ceee2)
+U 2 (#caa173)
+L 1 (#1b58a2)
+U 2 (#caa171)
+R 2 (#7807d2)
+U 3 (#a77fa3)
+L 2 (#015232)
+U 2 (#7a21e3)
+```
+
+The digger starts in a 1 meter cube hole in the ground. They then dig the specified number of meters **up** (`U`), **down** (`D`), **left** (`L`), or **right** (`R`), clearing full 1 meter cubes as they go. The directions are given as seen from above, so if "up" were north, then "right" would be east, and so on. Each trench is also listed with **the color that the edge of the trench should be painted** as an [RGB hexadecimal color code](https://en.wikipedia.org/wiki/RGB_color_model#Numeric_representations).
+
+When viewed from above, the above example dig plan would result in the following loop of **trench** (`#`) having been dug out from otherwise **ground-level terrain** (`.`):
+
+```
+#######
+#.....#
+###...#
+..#...#
+..#...#
+###.###
+#...#..
+##..###
+.#....#
+.######
+```
+
+At this point, the trench could contain 38 cubic meters of lava. However, this is just the edge of the lagoon; the next step is to **dig out the interior** so that it is one meter deep as well:
+
+```
+#######
+#######
+#######
+..#####
+..#####
+#######
+#####..
+#######
+.######
+.######
+```
+
+Now, the lagoon can contain a much more respectable **`62`** cubic meters of lava. While the interior is dug out, the edges are also painted according to the color codes in the dig plan.
+
+The Elves are concerned the lagoon won't be large enough; if they follow their dig plan, **how many cubic meters of lava could it hold?**
+
+### --- Part Two ---
+
+The Elves were right to be concerned; the planned lagoon would be **much too small**.
+
+After a few minutes, someone realizes what happened; someone **swapped the color and instruction parameters** when producing the dig plan. They don't have time to fix the bug; one of them asks if you can **extract the correct instructions** from the hexadecimal codes.
+
+Each hexadecimal code is **six hexadecimal digits** long. The first five hexadecimal digits encode the **distance in meters** as a five-digit hexadecimal number. The last hexadecimal digit encodes the **direction to dig**: `0` means `R`, `1` means `D`, `2` means `L`, and `3` means `U`.
+
+So, in the above example, the hexadecimal codes can be converted into the true instructions:
+
+* `#70c710` = `R 461937`
+* `#0dc571` = `D 56407`
+* `#5713f0` = `R 356671`
+* `#d2c081` = `D 863240`
+* `#59c680` = `R 367720`
+* `#411b91` = `D 266681`
+* `#8ceee2` = `L 577262`
+* `#caa173` = `U 829975`
+* `#1b58a2` = `L 112010`
+* `#caa171` = `D 829975`
+* `#7807d2` = `L 491645`
+* `#a77fa3` = `U 686074`
+* `#015232` = `L 5411`
+* `#7a21e3` = `U 500254`
+
+Digging out this loop and its interior produces a lagoon that can hold an impressive **`952408144115`** cubic meters of lava.
+
+Convert the hexadecimal color codes into the correct instructions; if the Elves follow this new dig plan, **how many cubic meters of lava could the lagoon hold?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxOCIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyMyJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "18", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn line ->
+      [direction, value, color] = String.split(line, [" ", "(#", ")"], trim: true)
+
+      {direction, String.to_integer(value), color}
+    end)
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  R 6 (#70c710)
+  D 5 (#0dc571)
+  L 2 (#5713f0)
+  D 2 (#d2c081)
+  R 2 (#59c680)
+  D 2 (#411b91)
+  L 5 (#8ceee2)
+  U 2 (#caa173)
+  L 1 (#1b58a2)
+  U 2 (#caa171)
+  R 2 (#7807d2)
+  U 3 (#a77fa3)
+  L 2 (#015232)
+  U 2 (#7a21e3)
+  """
+  @expected [
+    {"R", 6, "70c710"},
+    {"D", 5, "0dc571"},
+    {"L", 2, "5713f0"},
+    {"D", 2, "d2c081"},
+    {"R", 2, "59c680"},
+    {"D", 2, "411b91"},
+    {"L", 5, "8ceee2"},
+    {"U", 2, "caa173"},
+    {"L", 1, "1b58a2"},
+    {"U", 2, "caa171"},
+    {"R", 2, "7807d2"},
+    {"U", 3, "a77fa3"},
+    {"L", 2, "015232"},
+    {"U", 2, "7a21e3"}
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    points =
+      input
+      |> Parser.parse()
+      |> Enum.reduce([{0, 0}], fn {direction, value, _}, [{x, y} | _] = acc ->
+        case direction do
+          "U" ->
+            (y - 1)..(y - value)
+            |> Enum.reduce(acc, fn v, acc_up ->
+              [{x, v} | acc_up]
+            end)
+
+          "D" ->
+            (y + 1)..(y + value)
+            |> Enum.reduce(acc, fn v, acc_down ->
+              [{x, v} | acc_down]
+            end)
+
+          "L" ->
+            (x - 1)..(x - value)
+            |> Enum.reduce(acc, fn v, acc_left ->
+              [{v, y} | acc_left]
+            end)
+
+          "R" ->
+            (x + 1)..(x + value)
+            |> Enum.reduce(acc, fn v, acc_right ->
+              [{v, y} | acc_right]
+            end)
+
+          _ ->
+            acc
+        end
+      end)
+      |> Enum.uniq()
+      |> MapSet.new()
+
+    {x, y} =
+      points
+      |> Enum.to_list()
+      |> Enum.sort(:asc)
+      |> List.first()
+
+    trenches_pid =
+      points
+      |> dig_interior({x + 1, y + 1})
+
+    trenches = Agent.get(trenches_pid, fn trenches -> trenches end)
+
+    Agent.stop(trenches_pid)
+
+    MapSet.union(points, trenches)
+    |> Enum.count()
+  end
+
+  defp dig_interior(points, start) do
+    {:ok, trenches_pid} = Agent.start_link(fn -> MapSet.new() end)
+
+    dig_interior(points, start, trenches_pid)
+  end
+
+  defp dig_interior(points, {x, y} = curr, trenches_pid) do
+    in_points? = MapSet.member?(points, curr)
+
+    in_trenches? =
+      trenches_pid
+      |> Agent.get_and_update(fn trenches ->
+        {
+          MapSet.member?(trenches, curr),
+          MapSet.put(trenches, curr)
+        }
+      end)
+
+    case in_points? or in_trenches? do
+      true ->
+        trenches_pid
+
+      false ->
+        dig_interior(points, {x, y - 1}, trenches_pid)
+        dig_interior(points, {x, y + 1}, trenches_pid)
+        dig_interior(points, {x - 1, y}, trenches_pid)
+        dig_interior(points, {x + 1, y}, trenches_pid)
+    end
+  end
+end
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  R 6 (#70c710)
+  D 5 (#0dc571)
+  L 2 (#5713f0)
+  D 2 (#d2c081)
+  R 2 (#59c680)
+  D 2 (#411b91)
+  L 5 (#8ceee2)
+  U 2 (#caa173)
+  L 1 (#1b58a2)
+  U 2 (#caa171)
+  R 2 (#7807d2)
+  U 3 (#a77fa3)
+  L 2 (#015232)
+  U 2 (#7a21e3)
+  """
+  @expected 62
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    instructions =
+      input
+      |> Parser.parse()
+      |> Enum.map(fn {_, _, color} ->
+        {value, direction} = String.split_at(color, -1)
+
+        value =
+          value
+          |> String.to_integer(16)
+
+        direction =
+          case direction do
+            "0" -> "R"
+            "1" -> "D"
+            "2" -> "L"
+            _ -> "U"
+          end
+
+        {direction, value}
+      end)
+
+    scale =
+      instructions
+      |> Enum.map(fn {_, value} -> value end)
+      |> Enum.min()
+
+    points =
+      instructions
+      |> Enum.reduce([{0, 0}], fn {direction, value}, [{x, y} | _] = acc ->
+        case direction do
+          "U" ->
+            (y - 1)..(y - div(value, scale))
+            |> Enum.reduce(acc, fn v, acc_up ->
+              [{x, v} | acc_up]
+            end)
+
+          "D" ->
+            (y + 1)..(y + div(value, scale))
+            |> Enum.reduce(acc, fn v, acc_down ->
+              [{x, v} | acc_down]
+            end)
+
+          "L" ->
+            (x - 1)..(x - div(value, scale))
+            |> Enum.reduce(acc, fn v, acc_left ->
+              [{v, y} | acc_left]
+            end)
+
+          "R" ->
+            (x + 1)..(x + div(value, scale))
+            |> Enum.reduce(acc, fn v, acc_right ->
+              [{v, y} | acc_right]
+            end)
+
+          _ ->
+            acc
+        end
+      end)
+      |> Enum.uniq()
+      |> MapSet.new()
+
+    {x, y} =
+      points
+      |> Enum.to_list()
+      |> Enum.sort(:asc)
+      |> List.first()
+
+    trenches_pid =
+      points
+      |> dig_interior({x + 1, y + 1})
+
+    trenches = Agent.get(trenches_pid, fn trenches -> trenches end)
+
+    Agent.stop(trenches_pid)
+
+    MapSet.union(points, trenches)
+    |> Enum.count()
+    |> then(fn value -> value * scale * scale end)
+  end
+
+  defp dig_interior(points, start) do
+    {:ok, trenches_pid} = Agent.start_link(fn -> MapSet.new() end)
+
+    dig_interior(points, start, trenches_pid)
+  end
+
+  defp dig_interior(points, {x, y} = curr, trenches_pid) do
+    in_points? = MapSet.member?(points, curr)
+
+    in_trenches? =
+      trenches_pid
+      |> Agent.get_and_update(fn trenches ->
+        {
+          MapSet.member?(trenches, curr),
+          MapSet.put(trenches, curr)
+        }
+      end)
+
+    case in_points? or in_trenches? do
+      true ->
+        trenches_pid
+
+      false ->
+        dig_interior(points, {x, y - 1}, trenches_pid)
+        dig_interior(points, {x, y + 1}, trenches_pid)
+        dig_interior(points, {x - 1, y}, trenches_pid)
+        dig_interior(points, {x + 1, y}, trenches_pid)
+    end
+  end
+
+  # Least common multiple of 2 numbers
+  defp lcm(a, b) do
+    div(a * b, Integer.gcd(a, b))
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input """
+  R 6 (#70c710)
+  D 5 (#0dc571)
+  L 2 (#5713f0)
+  D 2 (#d2c081)
+  R 2 (#59c680)
+  D 2 (#411b91)
+  L 5 (#8ceee2)
+  U 2 (#caa173)
+  L 1 (#1b58a2)
+  U 2 (#caa171)
+  R 2 (#7807d2)
+  U 3 (#a77fa3)
+  L 2 (#015232)
+  U 2 (#7a21e3)
+  """
+  @expected 952_408_144_115
+
+  test "part two" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":11399,"stamp":{"token":"XCP.EkY3AHIfbOXcrIyOYxFGOVaWiA7SbCZpPmUF134hk0cMBs870Evmg-n1WdPXepS0lf3eI3wcB8gJu6Z6cVWiyzOoem4WVTToKfB1Q-ajLF71YZP2Kho","version":2}} -->

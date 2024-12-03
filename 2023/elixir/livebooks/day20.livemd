@@ -1,0 +1,843 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2023 - Day 20 (incomplete)
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 20: Pulse Propagation ---
+
+With your help, the Elves manage to find the right parts and fix all of the machines. Now, they just need to send the command to boot up the machines and get the sand flowing again.
+
+The machines are far apart and wired together with long **cables**. The cables don't connect to the machines directly, but rather to communication **modules** attached to the machines that perform various initialization tasks and also act as communication relays.
+
+Modules communicate using **pulses**. Each pulse is either a **high pulse** or a **low pulse**. When a module sends a pulse, it sends that type of pulse to each module in its list of **destination modules**.
+
+There are several different types of modules:
+
+**Flip-flop** modules (prefix `%`) are either **on** or **off**; they are initially **off**. If a flip-flop module receives a high pulse, it is ignored and nothing happens. However, if a flip-flop module receives a low pulse, it **flips between on and off**. If it was off, it turns on and sends a high pulse. If it was on, it turns off and sends a low pulse.
+
+**Conjunction** modules (prefix `&`) **remember** the type of the most recent pulse received from **each** of their connected input modules; they initially default to remembering a **low pulse** for each input. When a pulse is received, the conjunction module first updates its memory for that input. Then, if it remembers **high pulses** for all inputs, it sends a **low pulse**; otherwise, it sends a **high pulse**.
+
+There is a single **broadcast module** (named `broadcaster`). When it receives a pulse, it sends the same pulse to all of its destination modules.
+
+Here at Desert Machine Headquarters, there is a module with a single button on it called, aptly, the **button module**. When you push the button, a single **low pulse** is sent directly to the `broadcaster` module.
+
+After pushing the button, you must wait until all pulses have been delivered and fully handled before pushing it again. Never push the button if modules are still processing pulses.
+
+Pulses are always processed **in the order they are sent**. So, if a pulse is sent to modules `a`, `b`, and `c`, and then module `a` processes its pulse and sends more pulses, the pulses sent to modules `b` and `c` would have to be handled first.
+
+The module configuration (your puzzle input) lists each module. The name of the module is preceded by a symbol identifying its type, if any. The name is then followed by an arrow and a list of its destination modules. For example:
+
+```
+broadcaster -> a, b, c
+%a -> b
+%b -> c
+%c -> inv
+&inv -> a
+```
+
+In this module configuration, the broadcaster has three destination modules named `a`, `b`, and `c`. Each of these modules is a flip-flop module (as indicated by the `%` prefix). `a` outputs to `b` which outputs to `c` which outputs to another module named `inv`. `inv` is a conjunction module (as indicated by the `&` prefix) which, because it has only one input, acts like an inverter (it sends the opposite of the pulse type it receives); it outputs to `a`.
+
+By pushing the button once, the following pulses are sent:
+
+```
+button -low-> broadcaster
+broadcaster -low-> a
+broadcaster -low-> b
+broadcaster -low-> c
+a -high-> b
+b -high-> c
+c -high-> inv
+inv -low-> a
+a -low-> b
+b -low-> c
+c -low-> inv
+inv -high-> a
+```
+
+After this sequence, the flip-flop modules all end up **off**, so pushing the button again repeats the same sequence.
+
+Here's a more interesting example:
+
+```
+broadcaster -> a
+%a -> inv, con
+&inv -> b
+%b -> con
+&con -> output
+```
+
+This module configuration includes the `broadcaster`, two flip-flops (named `a` and `b`), a single-input conjunction module (`inv`), a multi-input conjunction module (`con`), and an untyped module named `output` (for testing purposes). The multi-input conjunction module `con` watches the two flip-flop modules and, if they're both on, sends a **low pulse** to the `output` module.
+
+Here's what happens if you push the button once:
+
+```
+button -low-> broadcaster
+broadcaster -low-> a
+a -high-> inv
+a -high-> con
+inv -low-> b
+con -high-> output
+b -high-> con
+con -low-> output
+```
+
+Both flip-flops turn on and a low pulse is sent to `output`! However, now that both flip-flops are on and `con` remembers a high pulse from each of its two inputs, pushing the button a second time does something different:
+
+```
+button -low-> broadcaster
+broadcaster -low-> a
+a -low-> inv
+a -low-> con
+inv -high-> b
+con -high-> output
+```
+
+Flip-flop a turns off! Now, `con` remembers a low pulse from module `a`, and so it sends only a high pulse to `output`.
+
+Push the button a third time:
+
+```
+button -low-> broadcaster
+broadcaster -low-> a
+a -high-> inv
+a -high-> con
+inv -low-> b
+con -low-> output
+b -low-> con
+con -high-> output
+```
+
+This time, flip-flop a turns on, then flip-flop `b` turns off. However, before `b` can turn off, the pulse sent to `con` is handled first, so it **briefly remembers all high pulses** for its inputs and sends a low pulse to `output`. After that, flip-flop `b` turns off, which causes `con` to update its state and send a high pulse to `output`.
+
+Finally, with a on and b off, push the button a fourth time:
+
+```
+button -low-> broadcaster
+broadcaster -low-> a
+a -low-> inv
+a -low-> con
+inv -high-> b
+con -high-> output
+```
+
+This completes the cycle: `a` turns off, causing `con` to remember only low pulses and restoring all modules to their original states.
+
+To get the cables warmed up, the Elves have pushed the button `1000` times. How many pulses got sent as a result (including the pulses sent by the button itself)?
+
+In the first example, the same thing happens every time the button is pushed: `8` low pulses and `4` high pulses are sent. So, after pushing the button `1000` times, 8000 low pulses and `4000` high pulses are sent. Multiplying these together gives **`32000000`**.
+
+In the second example, after pushing the button `1000` times, `4250` low pulses and `2750` high pulses are sent. Multiplying these together gives **`11687500`**.
+
+Consult your module configuration; determine the number of low pulses and high pulses that would be sent after pushing the button `1000` times, waiting for all pulses to be fully handled after each push of the button. **What do you get if you multiply the total number of low pulses sent by the total number of high pulses sent?***
+
+### --- Part Two ---
+
+Description
+
+## Puzzle
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIyMCIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyMyJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "20", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn line ->
+      [src | dest] = Regex.scan(~r/[%&a-z]+/, line) |> List.flatten()
+
+      {src, dest}
+    end)
+    |> Map.new()
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input1 """
+  broadcaster -> a, b, c
+  %a -> b
+  %b -> c
+  %c -> inv
+  &inv -> a
+  """
+  @expected1 %{
+    "broadcaster" => ["a", "b", "c"],
+    "%a" => ["b"],
+    "%b" => ["c"],
+    "%c" => ["inv"],
+    "&inv" => ["a"]
+  }
+
+  @input2 """
+  broadcaster -> a
+  %a -> inv, con
+  &inv -> b
+  %b -> con
+  &con -> output
+  """
+  @expected2 %{
+    "broadcaster" => ["a"],
+    "%a" => ["inv", "con"],
+    "&inv" => ["b"],
+    "%b" => ["con"],
+    "&con" => ["output"]
+  }
+
+  test "parse test" do
+    assert parse(@input1) == @expected1
+    assert parse(@input2) == @expected2
+  end
+end
+
+ExUnit.run()
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne2 do
+  def solve(input, times) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input, times)}")
+  end
+
+  def run(input, times) do
+    modules = input |> Parser.parse()
+    state = generate_state(modules)
+
+    # IO.inspect(modules)
+    # IO.inspect(state)
+
+    1..times
+    |> Enum.reduce({state, []}, fn _, {state, pulses} ->
+      push_button(modules, state, %{"broadcaster" => :low}, pulses)
+    end)
+    |> then(fn {_, pulses} -> pulses end)
+    |> Enum.frequencies()
+    |> then(fn pulses -> pulses.low * pulses.high end)
+  end
+
+  def generate_state(modules) do
+    modules
+    |> Map.keys()
+    |> Enum.reduce(%{}, fn
+      <<"%", name::binary>>, state ->
+        Map.put(state, name, :off)
+
+      <<"&", name::binary>>, state ->
+        inputs =
+          modules
+          |> Enum.filter(fn {_, dest} -> name in dest end)
+          |> Enum.map(fn {<<_::utf8, src::binary>>, _} -> {src, :low} end)
+          |> Map.new()
+
+        Map.put(state, name, inputs)
+
+      _, state ->
+        state
+    end)
+    |> Map.new()
+  end
+
+  def push_button(modules, state, inputs, pulses) do
+    new_inputs =
+      inputs
+      |> Enum.reduce(%{}, fn {name, pulse}, acc ->
+        case name do
+          "broadcaster" ->
+            modules
+            |> Map.get("broadcaster")
+            |> Enum.map(&{&1, pulse})
+            |> Map.new()
+            |> Map.merge(acc)
+
+          name when is_map_key(modules, "%" <> name) ->
+            modules
+            |> Map.get("%" <> name)
+            |> Enum.map(&{&1, flip_flop(state, name, pulse)})
+            |> Enum.filter(fn {_, value} -> value != :none end)
+            |> Map.new()
+            |> Map.merge(acc)
+
+          name when is_map_key(modules, "&" <> name) ->
+            modules
+            |> Map.get("&" <> name)
+            |> Enum.map(&{&1, conjunction(state, name)})
+            |> Map.new()
+            |> Map.merge(acc)
+
+          _ ->
+            acc
+        end
+      end)
+
+    # IO.inspect({"IN", inputs})
+    # IO.inspect({"STATE", state})
+
+    new_pulses =
+      inputs
+      |> Enum.reduce(pulses, fn {_, pulse}, acc ->
+        [pulse | acc]
+      end)
+
+    IO.inspect({"PULSES", new_pulses})
+
+    new_state =
+      state
+      |> update_state_ff(inputs)
+      |> update_state_conj(new_inputs)
+
+    empty? = new_inputs |> Map.keys() |> length() == 0
+
+    case empty? do
+      true ->
+        {new_state, new_pulses}
+
+      false ->
+        push_button(modules, new_state, new_inputs, new_pulses)
+    end
+  end
+
+  def flip_flop(state, name, pulse) do
+    status = Map.get(state, name)
+
+    cond do
+      status == :off and pulse == :low ->
+        :high
+
+      status == :on and pulse == :low ->
+        :low
+
+      true ->
+        :none
+    end
+  end
+
+  def conjunction(state, name) do
+    state
+    |> Map.get(name)
+    |> Map.values()
+    |> Enum.all?(&(&1 == :high))
+    |> then(fn
+      true -> :low
+      false -> :high
+    end)
+  end
+
+  def update_state_ff(state, inputs) do
+    Enum.reduce(inputs, state, fn {name, pulse}, acc ->
+      Enum.map(acc, fn
+        {^name, :off} when pulse == :low ->
+          {name, :on}
+
+        {^name, :on} when pulse == :low ->
+          {name, :off}
+
+        input ->
+          input
+      end)
+      |> Map.new()
+    end)
+  end
+
+  def update_state_conj(state, inputs) do
+    Enum.reduce(inputs, state, fn {name, pulse}, acc ->
+      Enum.map(acc, fn
+        {conj, input_names} when is_map(input_names) and is_map_key(input_names, name) ->
+          case flip_flop(acc, name, pulse) do
+            :none -> {conj, input_names}
+            new_pulse -> {conj, Map.replace(input_names, name, new_pulse)}
+          end
+
+        input ->
+          input
+      end)
+      |> Map.new()
+    end)
+  end
+end
+```
+
+```elixir
+defmodule PartOne3 do
+  def solve(input, times) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input, times)}")
+  end
+
+  def run(input, times) do
+    modules = input |> Parser.parse()
+    initial_state = generate_state(modules)
+
+    # IO.inspect(modules)
+    # IO.inspect(state)
+
+    1..times
+    |> Enum.reduce({initial_state, 0, 0}, fn _, {state, low, high} ->
+      push_button(modules, state, %{"broadcaster" => :low}, low, high)
+    end)
+    |> then(fn {_, low, high} -> low * high end)
+  end
+
+  def generate_state(modules) do
+    modules
+    |> Map.keys()
+    |> Enum.reduce(%{}, fn
+      <<"%", name::binary>>, state ->
+        Map.put(state, name, :off)
+
+      <<"&", name::binary>>, state ->
+        inputs =
+          modules
+          |> Enum.filter(fn {_, dest} -> name in dest end)
+          |> Enum.map(fn {<<_::utf8, src::binary>>, _} -> {src, :low} end)
+          |> Map.new()
+
+        Map.put(state, name, inputs)
+
+      _, state ->
+        state
+    end)
+    |> Map.new()
+  end
+
+  def push_button(modules, state, inputs, low, high) do
+    new_inputs =
+      inputs
+      |> Enum.reduce(%{}, fn {name, pulse}, acc ->
+        case name do
+          "broadcaster" ->
+            modules
+            |> Map.get("broadcaster")
+            |> Enum.map(&{&1, pulse})
+            |> Map.new()
+            |> Map.merge(acc)
+
+          name when is_map_key(modules, "%" <> name) ->
+            modules
+            |> Map.get("%" <> name)
+            |> Enum.map(&{&1, flip_flop(state, name, pulse)})
+            |> Enum.filter(fn {_, value} -> value != :none end)
+            |> Map.new()
+            |> Map.merge(acc)
+
+          name when is_map_key(modules, "&" <> name) ->
+            modules
+            |> Map.get("&" <> name)
+            |> Enum.map(&{&1, conjunction(state, name)})
+            |> Map.new()
+            |> Map.merge(acc)
+
+          _ ->
+            acc
+        end
+      end)
+
+    # IO.inspect({"IN", inputs})
+
+    # IO.inspect({"IN", inputs})
+    # IO.inspect({"STATE", state})
+
+    pulses = inputs |> Enum.map(&elem(&1, 1)) |> Enum.frequencies()
+
+    low = low + Map.get(pulses, :low, 0)
+    high = high + Map.get(pulses, :high, 0)
+
+    # IO.inspect({"LOW", low, "HIGH", high})
+
+    # new_state =
+    #   state
+    #   |> update_state_ff(inputs)
+    #   |> update_state_conj(modules, new_inputs)
+
+    new_state = update_state(state, modules, inputs)
+
+    case new_inputs == %{} do
+      true ->
+        {new_state, low, high}
+
+      false ->
+        push_button(modules, new_state, new_inputs, low, high)
+    end
+  end
+
+  def flip_flop(state, name, pulse) do
+    status = Map.get(state, name)
+
+    cond do
+      status == :off and pulse == :low ->
+        :high
+
+      status == :on and pulse == :low ->
+        :low
+
+      true ->
+        :none
+    end
+  end
+
+  def conjunction(state, name) do
+    state
+    |> Map.get(name)
+    |> Map.values()
+    |> Enum.all?(&(&1 == :high))
+    |> then(fn
+      true -> :low
+      false -> :high
+    end)
+  end
+
+  def update_state_ff(state, inputs) do
+    Enum.reduce(inputs, state, fn {name, pulse}, acc ->
+      Enum.map(acc, fn
+        {^name, :off} when pulse == :low ->
+          {name, :on}
+
+        {^name, :on} when pulse == :low ->
+          {name, :off}
+
+        input ->
+          input
+      end)
+      |> Map.new()
+    end)
+  end
+
+  def update_state_conj(state, modules, inputs) do
+    Enum.reduce(inputs, state, fn {name, pulse}, acc ->
+      Enum.map(acc, fn
+        {conj, input_names} when is_map(input_names) and is_map_key(input_names, name) ->
+          cond do
+            Map.has_key?(modules, "%" <> name) ->
+              case flip_flop(acc, name, pulse) do
+                :none -> {conj, input_names}
+                new_pulse -> {conj, Map.replace(input_names, name, new_pulse)}
+              end
+
+            Map.has_key?(modules, "&" <> name) ->
+              new_pulse = conjunction(acc, name)
+              {conj, Map.replace(input_names, name, new_pulse)}
+
+            true ->
+              {conj, input_names}
+          end
+
+        input ->
+          input
+      end)
+      |> Map.new()
+    end)
+  end
+
+  def update_state(state, modules, inputs) do
+    Enum.reduce(inputs, state, fn {name, pulse}, acc ->
+      Enum.map(acc, fn
+        {^name, :off} when pulse == :low ->
+          {name, :on}
+
+        {^name, :on} when pulse == :low ->
+          {name, :off}
+
+        {conj, input_names} when is_map(input_names) and is_map_key(input_names, name) ->
+          cond do
+            Map.has_key?(modules, "%" <> name) ->
+              case flip_flop(acc, name, pulse) do
+                :none -> {conj, input_names}
+                new_pulse -> {conj, Map.replace(input_names, name, new_pulse)}
+              end
+
+            Map.has_key?(modules, "&" <> name) ->
+              new_pulse = conjunction(acc, name)
+              {conj, Map.replace(input_names, name, new_pulse)}
+
+            true ->
+              {conj, input_names}
+          end
+
+        input ->
+          input
+      end)
+      |> Map.new()
+    end)
+  end
+end
+```
+
+```elixir
+defmodule PartOne do
+  def solve(input, times) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input, times)}")
+  end
+
+  def run(input, times) do
+    modules = input |> Parser.parse()
+    initial_state = generate_state(modules)
+
+    # IO.inspect(modules)
+    # IO.inspect(state)
+
+    1..times
+    |> Enum.reduce({initial_state, 0, 0}, fn _, {state, low, high} ->
+      push_button(modules, state, %{"broadcaster" => 0}, low, high)
+    end)
+    |> then(fn {_, low, high} -> low * high end)
+  end
+
+  def generate_state(modules) do
+    modules
+    |> Map.keys()
+    |> Enum.reduce(%{}, fn
+      <<"%", name::binary>>, state ->
+        Map.put(state, name, :low)
+
+      <<"&", name::binary>>, state ->
+        Map.put(state, name, :low)
+
+      _, state ->
+        state
+    end)
+  end
+
+  def push_button(modules, state, inputs, low, high) do
+    new_inputs =
+      inputs
+      |> Enum.reduce(%{}, fn {name, pulse}, acc ->
+        case name do
+          "broadcaster" ->
+            modules
+            |> Map.get("broadcaster")
+            |> Enum.map(&{&1, pulse})
+            |> Map.new()
+            |> Map.merge(acc)
+
+          name when is_map_key(modules, "%" <> name) ->
+            modules
+            |> Map.get("%" <> name)
+            |> Enum.map(&{&1, flip_flop(state, name, pulse)})
+            |> Enum.filter(fn {_, value} -> value != :none end)
+            |> Map.new()
+            |> Map.merge(acc)
+
+          name when is_map_key(modules, "&" <> name) ->
+            modules
+            |> Map.get("&" <> name)
+            |> Enum.map(&{&1, conjunction(state, name)})
+            |> Map.new()
+            |> Map.merge(acc)
+
+          _ ->
+            acc
+        end
+      end)
+
+    # IO.inspect({"IN", inputs})
+
+    # IO.inspect({"IN", inputs})
+    # IO.inspect({"STATE", state})
+
+    pulses = inputs |> Enum.map(&elem(&1, 1)) |> Enum.frequencies()
+
+    low = low + Map.get(pulses, :low, 0)
+    high = high + Map.get(pulses, :high, 0)
+
+    # IO.inspect({"LOW", low, "HIGH", high})
+
+    # new_state =
+    #   state
+    #   |> update_state_ff(inputs)
+    #   |> update_state_conj(modules, new_inputs)
+
+    new_state = update_state(state, modules, inputs)
+
+    case new_inputs == %{} do
+      true ->
+        {new_state, low, high}
+
+      false ->
+        push_button(modules, new_state, new_inputs, low, high)
+    end
+  end
+
+  def flip_flop(state, name, pulse) do
+    status = Map.get(state, name)
+
+    cond do
+      status == :low and pulse == :low ->
+        :high
+
+      status == :high and pulse == :low ->
+        :low
+
+      true ->
+        :none
+    end
+  end
+
+  def conjunction(state, modules, name) do
+    modules
+    |> Map.get("&" <> name)
+    |> Enum.map(&Map.get(state, &1))
+    |> Enum.all?(&(&1 == :high))
+    |> then(fn
+      true -> :low
+      false -> :high
+    end)
+  end
+
+  def update_state(state, modules, inputs) do
+    inputs
+    |> Enum.reduce(state, fn {name, pulse}, acc ->
+      cond do
+        Map.has_key?("%" <> name) ->
+          Map.replace(acc, name, flip_flop(state, name, pulse))
+      end
+    end)
+  end
+end
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input1 """
+  broadcaster -> a, b, c
+  %a -> b
+  %b -> c
+  %c -> inv
+  &inv -> a
+  """
+  @input2 """
+  broadcaster -> a
+  %a -> inv, con
+  &inv -> b
+  %b -> con
+  &con -> output
+  """
+
+  test "part one" do
+    assert run(@input1, 1) == 32
+    assert run(@input1, 1000) == 32_000_000
+    assert run(@input2, 1) == 16
+    assert run(@input2, 1000) == 11_687_500
+  end
+
+  # @state %{
+  #   "a" => :off,
+  #   "b" => :off,
+  #   "con" => %{"a" => :low, "b" => :low},
+  #   "inv" => %{"a" => :low}
+  # }
+  # @new_state %{
+  #   "a" => :off,
+  #   "b" => :off,
+  #   "con" => %{"a" => :high, "b" => :low},
+  #   "inv" => %{"a" => :high}
+  # }
+
+  # test "update state" do
+  #   assert update_state_conj(@state, %{"a" => :low}) == @new_state
+  # end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input, 1000)
+```
+
+```elixir
+# {"LOW", 10983, "HIGH", 38750}
+# 425591250
+# {"LOW", 11012, "HIGH", 38828}
+# 427573936
+# 476982612
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input ""
+  @expected nil
+
+  test "part two" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":21603,"stamp":{"token":"XCP.4_f_ELilq2K21G0h2dJoPdgBKktzJ-rYuOwP8BUUq5XliKMuF8GeDRVlO7ZKPHCtJHuvxx4mms-U86kJis5ukyWXmSgVBLbolVIY2TQDBH-jfgpAnvE","version":2}} -->

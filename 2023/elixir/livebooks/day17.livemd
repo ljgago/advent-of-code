@@ -1,0 +1,290 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2023 - Day 17 (incomplete)
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 17: Clumsy Crucible ---
+
+The lava starts flowing rapidly once the Lava Production Facility is operational. As you leave, the reindeer offers you a parachute, allowing you to quickly reach Gear Island.
+
+As you descend, your bird's-eye view of Gear Island reveals why you had trouble finding anyone on your way up: half of Gear Island is empty, but the half below you is a giant factory city!
+
+You land near the gradually-filling pool of lava at the base of your new **lavafall**. Lavaducts will eventually carry the lava throughout the city, but to make use of it immediately, Elves are loading it into large [crucibles](https://en.wikipedia.org/wiki/Crucible) on wheels.
+
+The crucibles are top-heavy and pushed by hand. Unfortunately, the crucibles become very difficult to steer at high speeds, and so it can be hard to go in a straight line for very long.
+
+To get Desert Island the machine parts it needs as soon as possible, you'll need to find the best way to get the crucible **from the lava pool to the machine parts factory**. To do this, you need to minimize **heat loss** while choosing a route that doesn't require the crucible to go in a **straight line** for too long.
+
+Fortunately, the Elves here have a map (your puzzle input) that uses traffic patterns, ambient temperature, and hundreds of other parameters to calculate exactly how much heat loss can be expected for a crucible entering any particular city block.
+
+For example:
+
+```
+2413432311323
+3215453535623
+3255245654254
+3446585845452
+4546657867536
+1438598798454
+4457876987766
+3637877979653
+4654967986887
+4564679986453
+1224686865563
+2546548887735
+4322674655533
+```
+
+Each city block is marked by a single digit that represents the **amount of heat loss if the crucible enters that block**. The starting point, the lava pool, is the top-left city block; the destination, the machine parts factory, is the bottom-right city block. (Because you already start in the top-left block, you don't incur that block's heat loss unless you leave that block and then return to it.)
+
+Because it is difficult to keep the top-heavy crucible going in a straight line for very long, it can move **at most three blocks** in a single direction before it must turn 90 degrees left or right. The crucible also can't reverse direction; after entering each city block, it may only turn left, continue straight, or turn right.
+
+One way to **minimize heat loss** is this path:
+
+```
+2>>34^>>>1323
+32v>>>35v5623
+32552456v>>54
+3446585845v52
+4546657867v>6
+14385987984v4
+44578769877v6
+36378779796v>
+465496798688v
+456467998645v
+12246868655<v
+25465488877v5
+43226746555v>
+```
+
+This path never moves more than three consecutive blocks in the same direction and incurs a heat loss of only **`102`**.
+
+Directing the crucible from the lava pool to the machine parts factory, but not moving more than three consecutive blocks in the same direction, **what is the least heat loss it can incur?**
+
+### --- Part Two ---
+
+Description
+
+## Puzzle
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxNyIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyMyJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2023", "17", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn line ->
+      line
+      |> String.codepoints()
+      |> Enum.map(&String.to_integer(&1))
+    end)
+  end
+
+  def get_size(matrix) do
+    size_x = matrix |> hd() |> length()
+    size_y = matrix |> length()
+
+    {size_x, size_y}
+  end
+
+  def get_value(matrix, {x, y}) do
+    {size_x, size_y} = get_size(matrix)
+
+    cond do
+      x < 0 or x >= size_x ->
+        nil
+
+      y < 0 or y >= size_y ->
+        nil
+
+      true ->
+        matrix
+        |> Enum.at(y, [])
+        |> Enum.at(x, nil)
+    end
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  2413432311323
+  3215453535623
+  3255245654254
+  3446585845452
+  4546657867536
+  1438598798454
+  4457876987766
+  3637877979653
+  4654967986887
+  4564679986453
+  1224686865563
+  2546548887735
+  4322674655533
+  """
+  @expected [
+    [2, 4, 1, 3, 4, 3, 2, 3, 1, 1, 3, 2, 3],
+    [3, 2, 1, 5, 4, 5, 3, 5, 3, 5, 6, 2, 3],
+    [3, 2, 5, 5, 2, 4, 5, 6, 5, 4, 2, 5, 4],
+    [3, 4, 4, 6, 5, 8, 5, 8, 4, 5, 4, 5, 2],
+    [4, 5, 4, 6, 6, 5, 7, 8, 6, 7, 5, 3, 6],
+    [1, 4, 3, 8, 5, 9, 8, 7, 9, 8, 4, 5, 4],
+    [4, 4, 5, 7, 8, 7, 6, 9, 8, 7, 7, 6, 6],
+    [3, 6, 3, 7, 8, 7, 7, 9, 7, 9, 6, 5, 3],
+    [4, 6, 5, 4, 9, 6, 7, 9, 8, 6, 8, 8, 7],
+    [4, 5, 6, 4, 6, 7, 9, 9, 8, 6, 4, 5, 3],
+    [1, 2, 2, 4, 6, 8, 6, 8, 6, 5, 5, 6, 3],
+    [2, 5, 4, 6, 5, 4, 8, 8, 8, 7, 7, 3, 5],
+    [4, 3, 2, 2, 6, 7, 4, 6, 5, 5, 5, 3, 3]
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    matrix =
+      input
+      |> String.split("\n", trim: true)
+      |> Enum.map(fn line ->
+        line
+        |> String.codepoints()
+        |> Enum.map(&String.to_integer(&1))
+      end)
+
+      IO.inspect Parser.get_value(matrix, {2, 1})
+  end
+end
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  2413432311323
+  3215453535623
+  3255245654254
+  3446585845452
+  4546657867536
+  1438598798454
+  4457876987766
+  3637877979653
+  4654967986887
+  4564679986453
+  1224686865563
+  2546548887735
+  4322674655533
+  """
+  @expected 102
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input ""
+  @expected nil
+
+  test "part two" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":6807,"stamp":{"token":"XCP.Yr_gqKTeoKbM3imqA4UK9gNsaQvwQGjeH_tGpBDQ3-zCYK8GTU0iCpCczh0cwnRh3jav-9NA6Zvbe53lSD_eUI7fcVd2XwVmcBXVckpfXtnYQ2_atCw","version":2}} -->
