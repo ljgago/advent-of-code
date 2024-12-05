@@ -4,6 +4,7 @@
 - [Day 2](livebooks/day02.livemd)
 - [Day 3](livebooks/day03.livemd)
 - [Day 4](livebooks/day04.livemd)
+- [Day 5](livebooks/day05.livemd)
 
 ## License
 
