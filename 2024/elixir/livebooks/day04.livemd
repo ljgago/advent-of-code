@@ -1,0 +1,423 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2024 - Day 4
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 4: Ceres Search ---
+
+"Looks like the Chief's not here. Next!" One of The Historians pulls out a device and pushes the only button on it. After a brief flash, you recognize the interior of the [Ceres monitoring station](https://adventofcode.com/2019/day/10)!
+
+As the search for the Chief continues, a small Elf who lives on the station tugs on your shirt; she'd like to know if you could help her with her **word search** (your puzzle input). She only has to find one word: `XMAS`.
+
+This word search allows words to be horizontal, vertical, diagonal, written backwards, or even overlapping other words. It's a little unusual, though, as you don't merely need to find one instance of `XMAS` - you need to find **all of them**. Here are a few ways `XMAS` might appear, where irrelevant characters have been replaced with `.`:
+
+```
+..X...
+.SAMX.
+.A..A.
+XMAS.S
+.X....
+```
+
+The actual word search will be full of letters instead. For example:
+
+```
+MMMSXXMASM
+MSAMXMSMSA
+AMXSXMAAMM
+MSAMASMSMX
+XMASAMXAMM
+XXAMMXXAMA
+SMSMSASXSS
+SAXAMASAAA
+MAMMMXMMMM
+MXMXAXMASX
+```
+
+In this word search, XMAS occurs a total of **`18`** times; here's the same word search again, but where letters not involved in any `XMAS` have been replaced with `.`:
+
+```
+....XXMAS.
+.SAMXMS...
+...S..A...
+..A.A.MS.X
+XMASAMX.MM
+X.....XA.A
+S.S.S.S.SS
+.A.A.A.A.A
+..M.M.M.MM
+.X.X.XMASX
+```
+
+Take a look at the little Elf's word search. **How many times does `XMAS` appear?**
+
+### --- Part Two ---
+
+The Elf looks quizzically at you. Did you misunderstand the assignment?
+
+Looking for the instructions, you flip over the word search to find that this isn't actually an **`XMAS`** puzzle; it's an **`X-MAS`** puzzle in which you're supposed to find two `MAS` in the shape of an `X`. One way to achieve that is like this:
+
+```
+M.S
+.A.
+M.S
+```
+
+Irrelevant characters have again been replaced with `.` in the above diagram. Within the `X`, each `MAS` can be written forwards or backwards.
+
+Here's the same example from before, but this time all of the `X-MAS`es have been kept instead:
+
+```
+.M.S......
+..A..MSMS.
+.M.S.MAA..
+..A.ASMSM.
+.M.S.M....
+..........
+S.S.S.S.S.
+.A.A.A.A..
+M.M.M.M.M.
+..........
+```
+
+In this example, an `X-MAS` appears **`9`** times.
+
+Flip the word search from the instructions back over to the word search side and try again. **How many times does an `X-MAS` appear?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiI0Iiwic2Vzc2lvbl9zZWNyZXQiOiJBT0NfU0VTU0lPTiIsInllYXIiOiIyMDI0In0","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "4", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&String.codepoints(&1))
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  MMMSXXMASM
+  MSAMXMSMSA
+  AMXSXMAAMM
+  MSAMASMSMX
+  XMASAMXAMM
+  XXAMMXXAMA
+  SMSMSASXSS
+  SAXAMASAAA
+  MAMMMXMMMM
+  MXMXAXMASX
+  """
+  @expected [
+    ["M", "M", "M", "S", "X", "X", "M", "A", "S", "M"],
+    ["M", "S", "A", "M", "X", "M", "S", "M", "S", "A"],
+    ["A", "M", "X", "S", "X", "M", "A", "A", "M", "M"],
+    ["M", "S", "A", "M", "A", "S", "M", "S", "M", "X"],
+    ["X", "M", "A", "S", "A", "M", "X", "A", "M", "M"],
+    ["X", "X", "A", "M", "M", "X", "X", "A", "M", "A"],
+    ["S", "M", "S", "M", "S", "A", "S", "X", "S", "S"],
+    ["S", "A", "X", "A", "M", "A", "S", "A", "A", "A"],
+    ["M", "A", "M", "M", "M", "X", "M", "M", "M", "M"],
+    ["M", "X", "M", "X", "A", "X", "M", "A", "S", "X"]
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+## Tools
+
+### Code - Tools
+
+```elixir
+defmodule Matrix do
+  def size(matrix) do
+    rows = matrix |> length()
+    cols = matrix |> hd() |> length()
+
+    {rows, cols}
+  end
+
+  def value(matrix, i, j) do
+    matrix
+    |> Enum.at(i, [])
+    |> Enum.at(j, ".")
+  end
+
+  def transpose(matrix) do
+    {rows, cols} = size(matrix)
+
+    for j <- 0..(cols - 1) do
+      for i <- 0..(rows - 1), into: [] do
+        matrix
+        |> Enum.at(i, [])
+        |> Enum.at(j)
+      end
+    end
+  end
+
+  def diagonal(matrix) do
+    {rows, cols} = size(matrix)
+
+    for p <- 0..(rows + cols - 2), into: [] do
+      for q <- max(p - rows + 1, 0)..(min(p + 1, cols) - 1) do
+        matrix
+        |> value(rows - p + 1 - 1, q)
+      end
+    end
+  end
+
+  def antidiagonal(matrix) do
+    {rows, cols} = size(matrix)
+
+    for p <- 0..(rows + cols - 2), into: [] do
+      for q <- max(p - rows + 1, 0)..(min(p + 1, cols) - 1) do
+        matrix
+        |> value(p - q, q)
+      end
+    end
+  end
+end
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    matrix =
+      input
+      |> Parser.parse()
+
+    count = 0
+    count = count + (matrix |> count_xmax())
+    count = count + (matrix |> Matrix.transpose() |> count_xmax())
+    count = count + (matrix |> Matrix.antidiagonal() |> count_xmax())
+    count = count + (matrix |> Matrix.diagonal() |> count_xmax())
+
+    count
+  end
+
+  def count_xmax(matrix) do
+    matrix
+    |> Enum.map(fn row ->
+      xmas =
+        row
+        |> Enum.join()
+        |> String.split("XMAS")
+        |> length()
+        |> Kernel.-(1)
+
+      samx =
+        row
+        |> Enum.join()
+        |> String.split("SAMX")
+        |> length()
+        |> Kernel.-(1)
+
+      xmas + samx
+    end)
+    |> Enum.sum()
+  end
+end
+```
+
+### Tests - Part 1
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  MMMSXXMASM
+  MSAMXMSMSA
+  AMXSXMAAMM
+  MSAMASMSMX
+  XMASAMXAMM
+  XXAMMXXAMA
+  SMSMSASXSS
+  SAXAMASAAA
+  MAMMMXMMMM
+  MXMXAXMASX
+  """
+  @expected 18
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  @xmas_allowed [
+    [
+      ["M", ".", "M"],
+      [".", "A", "."],
+      ["S", ".", "S"]
+    ],
+    [
+      ["S", ".", "M"],
+      [".", "A", "."],
+      ["S", ".", "M"]
+    ],
+    [
+      ["S", ".", "S"],
+      [".", "A", "."],
+      ["M", ".", "M"]
+    ],
+    [
+      ["M", ".", "S"],
+      [".", "A", "."],
+      ["M", ".", "S"]
+    ]
+  ]
+
+  def run(input) do
+    matrix =
+      input
+      |> Parser.parse()
+
+    {rows, cols} = Matrix.size(matrix)
+
+    for i <- 1..(rows - 2) do
+      for j <- 1..(cols - 2), into: [] do
+        # a.b
+        # .c.
+        # e.f
+        
+        a = matrix |> Matrix.value(i - 1, j - 1)
+        b = matrix |> Matrix.value(i + 1, j - 1)
+        c = matrix |> Matrix.value(i, j)
+        e = matrix |> Matrix.value(i - 1, j + 1)
+        f = matrix |> Matrix.value(i + 1, j + 1)
+
+        xmas = [
+          [a, ".", b],
+          [".", c, "."],
+          [e, ".", f]
+        ]
+
+        @xmas_allowed
+        |> Enum.filter(&(&1 == xmas))
+        |> Enum.count()
+        |> case do
+          0 -> 0
+          _ -> 1
+        end
+      end
+    end
+    |> Enum.map(&Enum.sum(&1))
+    |> Enum.sum()
+  end
+end
+```
+
+### Tests - Part 2
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input """
+  MMMSXXMASM
+  MSAMXMSMSA
+  AMXSXMAAMM
+  MSAMASMSMX
+  XMASAMXAMM
+  XXAMMXXAMA
+  SMSMSASXSS
+  SAXAMASAAA
+  MAMMMXMMMM
+  MXMXAXMASX
+  """
+  @expected 9
+
+  test "part two" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":8290,"stamp":{"token":"XCP.q_AqVVrPbq4KmJ6cjgoREygcDphTzwmKAUKAtS5q5hrjW_PL9m-s82EnxjgB712EyN8ATVkPW1EUg_anRMip7ZPqrfj8nKs9L6oT1kd8UyQJ66IcBh8","version":2}} -->
