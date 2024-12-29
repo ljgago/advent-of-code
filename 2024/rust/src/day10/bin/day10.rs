@@ -2,13 +2,14 @@
 
 mod part1;
 mod part2;
+mod parser;
 
 fn main() {
-    let _input = include_str!("../input.txt");
+    let input = include_str!("../puzzle_2024_10.txt");
 
     println!("--- Part One ---");
-    println!("Result: {}", part1::part1());
+    println!("Result: {}", part1::part1(input));
 
     println!("--- Part Two ---");
-    println!("Result: {}", part2::part2());
+    println!("Result: {}", part2::part2(input));
 }
