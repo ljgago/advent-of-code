@@ -1,0 +1,753 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2024 - Day 6
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 6: Guard Gallivant ---
+
+The Historians use their fancy [device](https://adventofcode.com/2024/day/4) again, this time to whisk you all away to the North Pole prototype suit manufacturing lab... in the year [1518](https://adventofcode.com/2018/day/5)! It turns out that having direct access to history is very convenient for a group of historians.
+
+You still have to be careful of time paradoxes, and so it will be important to avoid anyone from 1518 while The Historians search for the Chief. Unfortunately, a single **guard** is patrolling this part of the lab.
+
+Maybe you can work out where the guard will go ahead of time so that The Historians can search safely?
+
+You start by making a map (your puzzle input) of the situation. For example:
+
+```
+....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#..^.....
+........#.
+#.........
+......#...
+```
+
+The map shows the current position of the guard with `^` (to indicate the guard is currently facing **up** from the perspective of the map). Any **obstructions** - crates, desks, alchemical reactors, etc. - are shown as `#`.
+
+Lab guards in 1518 follow a very strict patrol protocol which involves repeatedly following these steps:
+
+* If there is something directly in front of you, turn right 90 degrees.
+* Otherwise, take a step forward.
+
+Following the above protocol, the guard moves up several times until she reaches an obstacle (in this case, a pile of failed suit prototypes):
+
+```
+....#.....
+....^....#
+..........
+..#.......
+.......#..
+..........
+.#........
+........#.
+#.........
+......#...
+```
+
+Because there is now an obstacle in front of the guard, she turns right before continuing straight in her new facing direction:
+
+```
+....#.....
+........>#
+..........
+..#.......
+.......#..
+..........
+.#........
+........#.
+#.........
+......#...
+```
+
+Reaching another obstacle (a spool of several **very** long polymers), she turns right again and continues downward:
+
+```
+....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#......v.
+........#.
+#.........
+......#...
+```
+
+This process continues for a while, but the guard eventually leaves the mapped area (after walking past a tank of universal solvent):
+
+```
+....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#........
+........#.
+#.........
+......#v..
+```
+
+By predicting the guard's route, you can determine which specific positions in the lab will be in the patrol path. **Including the guard's starting position**, the positions visited by the guard before leaving the area are marked with an `X`:
+
+```
+....#.....
+....XXXXX#
+....X...X.
+..#.X...X.
+..XXXXX#X.
+..X.X.X.X.
+.#XXXXXXX.
+.XXXXXXX#.
+#XXXXXXX..
+......#X..
+```
+
+In this example, the guard will visit **`41`** distinct positions on your map.
+
+Predict the path of the guard. **How many distinct positions will the guard visit before leaving the mapped area?**
+
+### --- Part Two ---
+
+While The Historians begin working around the guard's patrol route, you borrow their fancy device and step outside the lab. From the safety of a supply closet, you time travel through the last few months and [record](https://adventofcode.com/2018/day/4) the nightly status of the lab's guard post on the walls of the closet.
+
+Returning after what seems like only a few seconds to The Historians, they explain that the guard's patrol area is simply too large for them to safely search the lab without getting caught.
+
+Fortunately, they are **pretty sure** that adding a single new obstruction **won't** cause a time paradox. They'd like to place the new obstruction in such a way that the guard will get **stuck in a loop**, making the rest of the lab safe to search.
+
+To have the lowest chance of creating a time paradox, The Historians would like to know **all** of the possible positions for such an obstruction. The new obstruction can't be placed at the guard's starting position - the guard is there right now and would notice.
+
+In the above example, there are only **`6`** different positions where a new obstruction would cause the guard to get stuck in a loop. The diagrams of these six situations use `O` to mark the new obstruction, `|` to show a position where the guard moves up/down, `-` to show a position where the guard moves left/right, and `+` to show a position where the guard moves both up/down and left/right.
+
+Option one, put a printing press next to the guard's starting position:
+
+```
+....#.....
+....+---+#
+....|...|.
+..#.|...|.
+....|..#|.
+....|...|.
+.#.O^---+.
+........#.
+#.........
+......#...
+```
+
+Option two, put a stack of failed suit prototypes in the bottom right quadrant of the mapped area:
+
+```
+....#.....
+....+---+#
+....|...|.
+..#.|...|.
+..+-+-+#|.
+..|.|.|.|.
+.#+-^-+-+.
+......O.#.
+#.........
+......#...
+```
+
+Option three, put a crate of chimney-squeeze prototype fabric next to the standing desk in the bottom right quadrant:
+
+```
+....#.....
+....+---+#
+....|...|.
+..#.|...|.
+..+-+-+#|.
+..|.|.|.|.
+.#+-^-+-+.
+.+----+O#.
+#+----+...
+......#...
+```
+
+Option four, put an alchemical retroencabulator near the bottom left corner:
+
+```
+....#.....
+....+---+#
+....|...|.
+..#.|...|.
+..+-+-+#|.
+..|.|.|.|.
+.#+-^-+-+.
+..|...|.#.
+#O+---+...
+......#...
+```
+
+Option five, put the alchemical retroencabulator a bit to the right instead:
+
+```
+....#.....
+....+---+#
+....|...|.
+..#.|...|.
+..+-+-+#|.
+..|.|.|.|.
+.#+-^-+-+.
+....|.|.#.
+#..O+-+...
+......#...
+```
+
+Option six, put a tank of sovereign glue right next to the tank of universal solvent:
+
+```
+....#.....
+....+---+#
+....|...|.
+..#.|...|.
+..+-+-+#|.
+..|.|.|.|.
+.#+-^-+-+.
+.+----++#.
+#+----++..
+......#O..
+```
+
+It doesn't really matter what you choose to use as an obstacle so long as you and The Historians can put it into position without the guard noticing. The important thing is having enough options that you can find one that minimizes time paradoxes, and in this example, there are **`6`** different positions you could choose.
+
+You need to get the guard stuck in a loop by adding a single new obstruction. **How many different positions could you choose for this obstruction?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiI2Iiwic2Vzc2lvbl9zZWNyZXQiOiJBT0NfU0VTU0lPTiIsInllYXIiOiIyMDI0In0","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "6", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  ....#.....
+  .........#
+  ..........
+  ..#.......
+  .......#..
+  ..........
+  .#..^.....
+  ........#.
+  #.........
+  ......#...
+  """
+  @expected [
+    "....#.....",
+    ".........#",
+    "..........",
+    "..#.......",
+    ".......#..",
+    "..........",
+    ".#..^.....",
+    "........#.",
+    "#.........",
+    "......#..."
+  ]
+  
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+## Tools
+
+### Tools - Code
+
+```elixir
+defmodule Matrix do
+  def size(matrix) do
+    rows = matrix |> length()
+    cols = matrix |> hd() |> String.length()
+
+    {rows, cols}
+  end
+
+  def value(matrix, {x, y}) do
+    {rows, cols} = size(matrix)
+
+    if (x >= 0 and x < cols) and (y >= 0 and y < rows) do
+      matrix
+      |> Enum.at(y, "")
+      |> String.at(x)
+    else
+      nil
+    end
+  end
+end
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    matrix = Parser.parse(input)
+    {rows, cols} = Matrix.size(matrix)
+
+    [start] =
+      for x <- 0..(rows - 1),
+          y <- 0..(cols - 1),
+          Matrix.value(matrix, {x, y}) == "^",
+          do: {x, y}
+
+    protocol_loop(matrix, start, "^", MapSet.new())
+    |> MapSet.size()
+  end
+
+  def protocol_loop(matrix, point, direction, positions) do
+    case point do
+      nil ->
+        positions
+
+      _ ->
+        positions = MapSet.put(positions, point)
+        {next_point, new_direction} = next_direction(matrix, point, direction)
+
+        protocol_loop(matrix, next_point, new_direction, positions)
+    end
+  end
+
+  def next_direction(matrix, {x, y}, direction) do
+    case direction do
+      "^" ->
+        next_point = {x, y - 1}
+        value = Matrix.value(matrix, next_point)
+
+        case value do
+          "#" -> next_direction(matrix, {x, y}, ">")
+          nil -> {nil, direction}
+          _ -> {next_point, direction}
+        end
+
+      ">" ->
+        next_point = {x + 1, y}
+        value = Matrix.value(matrix, next_point)
+
+        case value do
+          "#" -> next_direction(matrix, {x, y}, "v")
+          nil -> {nil, direction}
+          _ -> {next_point, direction}
+        end
+
+      "v" ->
+        next_point = {x, y + 1}
+        value = Matrix.value(matrix, next_point)
+
+        case value do
+          "#" -> next_direction(matrix, {x, y}, "<")
+          nil -> {nil, direction}
+          _ -> {next_point, direction}
+        end
+
+      "<" ->
+        next_point = {x - 1, y}
+        value = Matrix.value(matrix, next_point)
+
+        case value do
+          "#" -> next_direction(matrix, {x, y}, "^")
+          nil -> {nil, direction}
+          _ -> {next_point, direction}
+        end
+    end
+  end
+end
+```
+
+### Tests - Part 1
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  ....#.....
+  .........#
+  ..........
+  ..#.......
+  .......#..
+  ..........
+  .#..^.....
+  ........#.
+  #.........
+  ......#...
+  """
+  @expected 41
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    matrix = Parser.parse(input)
+    {rows, cols} = Matrix.size(matrix)
+
+    [start] =
+      for x <- 0..(rows - 1),
+          y <- 0..(cols - 1),
+          Matrix.value(matrix, {x, y}) == "^",
+          do: {x, y}
+
+    find_obstructions(matrix, start, "^", 0)
+  end
+
+  def find_obstructions(matrix, point, direction, obstructions) do
+    case point do
+      nil ->
+        obstructions
+
+      _ ->
+        obstruction_point = next_obstruction(matrix, point, direction)
+        new_obstruction = protocol_loop(matrix, point, direction, MapSet.new(), obstruction_point)
+        {next_point, new_direction} = PartOne.next_direction(matrix, point, direction)
+        find_obstructions(matrix, next_point, new_direction, obstructions + new_obstruction)
+    end
+  end
+
+  def next_obstruction(matrix, {x, y}, direction) do
+    case direction do
+      "^" ->
+        obstruction_point = {x, y - 1}
+        value = Matrix.value(matrix, obstruction_point)
+
+        case value do
+          "." -> obstruction_point
+          "#" -> next_obstruction(matrix, {x, y}, ">")
+          _ -> nil
+        end
+
+      ">" ->
+        obstruction_point = {x + 1, y}
+        value = Matrix.value(matrix, obstruction_point)
+
+        case value do
+          "." -> obstruction_point
+          "#" -> next_obstruction(matrix, {x, y}, "v")
+          _ -> nil
+        end
+
+      "v" ->
+        obstruction_point = {x, y + 1}
+        value = Matrix.value(matrix, obstruction_point)
+
+        case value do
+          "." -> obstruction_point
+          "#" -> next_obstruction(matrix, {x, y}, "<")
+          _ -> nil
+        end
+
+      "<" ->
+        obstruction_point = {x - 1, y}
+        value = Matrix.value(matrix, obstruction_point)
+
+        case value do
+          "." -> obstruction_point
+          "#" -> next_obstruction(matrix, {x, y}, "^")
+          _ -> nil
+        end
+    end
+  end
+
+  def protocol_loop(matrix, point, direction, positions, obstruction_point) do
+    cond do
+      point == nil ->
+        0
+
+      MapSet.member?(positions, {point, direction}) ->
+        1
+
+      true ->
+        positions = MapSet.put(positions, {point, direction})
+        {next_point, new_direction} = next_direction(matrix, point, direction, obstruction_point)
+
+        protocol_loop(matrix, next_point, new_direction, positions, obstruction_point)
+    end
+  end
+
+  def next_direction(matrix, {x, y}, direction, obstruction_point) do
+    case direction do
+      "^" ->
+        next_point = {x, y - 1}
+
+        value =
+          cond do
+            next_point == obstruction_point -> "#"
+            true -> Matrix.value(matrix, next_point)
+          end
+
+        case value do
+          "#" -> next_direction(matrix, {x, y}, ">", obstruction_point)
+          nil -> {nil, direction}
+          _ -> {next_point, direction}
+        end
+
+      ">" ->
+        next_point = {x + 1, y}
+
+        value =
+          cond do
+            next_point == obstruction_point -> "#"
+            true -> Matrix.value(matrix, next_point)
+          end
+
+        case value do
+          "#" -> next_direction(matrix, {x, y}, "v", obstruction_point)
+          nil -> {nil, direction}
+          _ -> {next_point, direction}
+        end
+
+      "v" ->
+        next_point = {x, y + 1}
+
+        value =
+          cond do
+            next_point == obstruction_point -> "#"
+            true -> Matrix.value(matrix, next_point)
+          end
+
+        case value do
+          "#" -> next_direction(matrix, {x, y}, "<", obstruction_point)
+          nil -> {nil, direction}
+          _ -> {next_point, direction}
+        end
+
+      "<" ->
+        next_point = {x - 1, y}
+
+        value =
+          cond do
+            next_point == obstruction_point -> "#"
+            true -> Matrix.value(matrix, next_point)
+          end
+
+        case value do
+          "#" -> next_direction(matrix, {x, y}, "^", obstruction_point)
+          nil -> {nil, direction}
+          _ -> {next_point, direction}
+        end
+    end
+  end
+end
+```
+
+### Tests - Part 2
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input """
+  ....#.....
+  .........#
+  ..........
+  ..#.......
+  .......#..
+  ..........
+  .#..^.....
+  ........#.
+  #.........
+  ......#...
+  """
+  @expected 6
+
+  test "part two" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+```elixir
+# def protocol_loop(matrix, point, direction, positions, obstructions) do
+#     case point do
+#       nil ->
+#         obstructions
+
+#       _ ->
+#         positions = MapSet.put(positions, {point, direction})
+#         {next_point, new_direction} = next_direction(matrix, point, direction, nil)
+
+#         new_obstruction =
+#           matrix
+#           |> next_direction(point, direction, next_point)
+#           |> check_obstruction(positions, next_point)
+
+#         protocol_loop(
+#           matrix,
+#           next_point,
+#           new_direction,
+#           positions,
+#           obstructions + new_obstruction
+#         )
+#     end
+#   end
+
+#   def next_direction(matrix, {x, y}, direction, obstruction_point) do
+#     case direction doO
+#       "^" ->
+#         next_point = {x, y - 1}
+
+#         value =
+#           case next_point == obstruction_point do
+#             true -> "#"
+#             false -> Matrix.value(matrix, next_point)
+#           end
+
+#         case value do
+#           "#" -> next_direction(matrix, {x, y}, ">", obstruction_point)
+#           nil -> {nil, direction}
+#           _ -> {next_point, direction}
+#         end
+
+#       ">" ->
+#         next_point = {x + 1, y}
+
+#         value =
+#           case next_point == obstruction_point do
+#             true -> "#"
+#             false -> Matrix.value(matrix, next_point)
+#           end
+
+#         case value do
+#           "#" -> next_direction(matrix, {x, y}, "v", obstruction_point)
+#           nil -> {nil, direction}
+#           _ -> {next_point, direction}
+#         end
+
+#       "v" ->
+#         next_point = {x, y + 1}
+
+#         value =
+#           case next_point == obstruction_point do
+#             true -> "#"
+#             false -> Matrix.value(matrix, next_point)
+#           end
+
+#         case value do
+#           "#" -> next_direction(matrix, {x, y}, "<", obstruction_point)
+#           nil -> {nil, direction}
+#           _ -> {next_point, direction}
+#         end
+
+#       "<" ->
+#         next_point = {x - 1, y}
+
+#         value =
+#           case next_point == obstruction_point do
+#             true -> "#"
+#             false -> Matrix.value(matrix, next_point)
+#           end
+
+#         case value do
+#           "#" -> next_direction(matrix, {x, y}, "^", obstruction_point)
+#           nil -> {nil, direction}
+#           _ -> {next_point, direction}
+#         end
+#     end
+#   end
+
+#   def check_obstruction(point_direction_obstruction, positions, obstruction_point) do
+#     case MapSet.member?(positions, point_direction_obstruction) do
+#       true ->
+#         IO.inspect(obstruction_point)
+#         1
+
+#       false ->
+#         0
+#     end
+#   end
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":17574,"stamp":{"token":"XCP.0aNlepu3Toncf2uGtQK_27aEqa1ard5smDbOEii3vJD5oT5e2qw6ZP5IGiuukYXS22zTo7fV7o8u3RySyEWvVEyG7qaP5bFWaQPaokoXuI55EZa_SCE","version":2}} -->
