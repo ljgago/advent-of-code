@@ -1,0 +1,1315 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2024 - Day 15
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 15: Warehouse Woes ---
+
+You appear back inside your own mini submarine! Each Historian drives their mini submarine in a different direction; maybe the Chief has his own submarine down here somewhere as well?
+
+You look up to see a vast school of [lanternfish](https://adventofcode.com/2021/day/6) swimming past you. On closer inspection, they seem quite anxious, so you drive your mini submarine over to see if you can help.
+
+Because lanternfish populations grow rapidly, they need a lot of food, and that food needs to be stored somewhere. That's why these lanternfish have built elaborate warehouse complexes operated by robots!
+
+These lanternfish seem so anxious because they have lost control of the robot that operates one of their most important warehouses! It is currently running amok, pushing around boxes in the warehouse with no regard for lanternfish logistics **or** lanternfish inventory management strategies.
+
+Right now, none of the lanternfish are brave enough to swim up to an unpredictable robot so they could shut it off. However, if you could anticipate the robot's movements, maybe they could find a safe option.
+
+The lanternfish already have a map of the warehouse and a list of movements the robot will **attempt** to make (your puzzle input). The problem is that the movements will sometimes fail as boxes are shifted around, making the actual movements of the robot difficult to predict.
+
+For example:
+
+```
+##########
+#..O..O.O#
+#......O.#
+#.OO..O.O#
+#..O@..O.#
+#O#..O...#
+#O..O..O.#
+#.OO.O.OO#
+#....O...#
+##########
+
+<vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+<<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+>^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+<><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+```
+
+As the robot (`@`) attempts to move, if there are any boxes (`O`) in the way, the robot will also attempt to push those boxes. However, if this action would cause the robot or a box to move into a wall (`#`), nothing moves instead, including the robot. The initial positions of these are shown on the map at the top of the document the lanternfish gave you.
+
+The rest of the document describes the **moves** (`^` for up, `v` for down, `<` for left, `>` for right) that the robot will attempt to make, in order. (The moves form a single giant sequence; they are broken into multiple lines just to make copy-pasting easier. Newlines within the move sequence should be ignored.)
+
+Here is a smaller example to get started:
+
+```
+########
+#..O.O.#
+##@.O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+<^^>>>vv<v>>v<<
+```
+
+Were the robot to attempt the given sequence of moves, it would push around the boxes as follows:
+
+```
+Initial state:
+########
+#..O.O.#
+##@.O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+Move <:
+########
+#..O.O.#
+##@.O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+Move ^:
+########
+#.@O.O.#
+##..O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+Move ^:
+########
+#.@O.O.#
+##..O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+Move >:
+########
+#..@OO.#
+##..O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+Move >:
+########
+#...@OO#
+##..O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+Move >:
+########
+#...@OO#
+##..O..#
+#...O..#
+#.#.O..#
+#...O..#
+#......#
+########
+
+Move v:
+########
+#....OO#
+##..@..#
+#...O..#
+#.#.O..#
+#...O..#
+#...O..#
+########
+
+Move v:
+########
+#....OO#
+##..@..#
+#...O..#
+#.#.O..#
+#...O..#
+#...O..#
+########
+
+Move <:
+########
+#....OO#
+##.@...#
+#...O..#
+#.#.O..#
+#...O..#
+#...O..#
+########
+
+Move v:
+########
+#....OO#
+##.....#
+#..@O..#
+#.#.O..#
+#...O..#
+#...O..#
+########
+
+Move >:
+########
+#....OO#
+##.....#
+#...@O.#
+#.#.O..#
+#...O..#
+#...O..#
+########
+
+Move >:
+########
+#....OO#
+##.....#
+#....@O#
+#.#.O..#
+#...O..#
+#...O..#
+########
+
+Move v:
+########
+#....OO#
+##.....#
+#.....O#
+#.#.O@.#
+#...O..#
+#...O..#
+########
+
+Move <:
+########
+#....OO#
+##.....#
+#.....O#
+#.#O@..#
+#...O..#
+#...O..#
+########
+
+Move <:
+########
+#....OO#
+##.....#
+#.....O#
+#.#O@..#
+#...O..#
+#...O..#
+########
+```
+
+The larger example has many more moves; after the robot has finished those moves, the warehouse would look like this:
+
+```
+##########
+#.O.O.OOO#
+#........#
+#OO......#
+#OO@.....#
+#O#.....O#
+#O.....OO#
+#O.....OO#
+#OO....OO#
+##########
+```
+
+The lanternfish use their own custom Goods Positioning System (GPS for short) to track the locations of the boxes. The **GPS coordinate** of a box is equal to 100 times its distance from the top edge of the map plus its distance from the left edge of the map. (This process does not stop at wall tiles; measure all the way to the edges of the map.)
+
+So, the box shown below has a distance of `1` from the top edge of the map and `4` from the left edge of the map, resulting in a GPS coordinate of `100 * 1 + 4 = 104`.
+
+```
+#######
+#...O..
+#......
+```
+
+The lanternfish would like to know the **sum of all boxes' GPS coordinates** after the robot finishes moving. In the larger example, the sum of all boxes' GPS coordinates is **`10092`**. In the smaller example, the sum is **`2028`**.
+
+Predict the motion of the robot and boxes in the warehouse. After the robot is finished moving, **what is the sum of all boxes' GPS coordinates?**
+
+### --- Part Two ---
+
+The lanternfish use your information to find a safe moment to swim in and turn off the malfunctioning robot! Just as they start preparing a festival in your honor, reports start coming in that a **second** warehouse's robot is **also** malfunctioning.
+
+This warehouse's layout is surprisingly similar to the one you just helped. There is one key difference: everything except the robot is **twice as wide**! The robot's list of movements doesn't change.
+
+To get the wider warehouse's map, start with your original map and, for each tile, make the following changes:
+
+* If the tile is `#`, the new map contains `##` instead.
+* If the tile is `O`, the new map contains `[]` instead.
+* If the tile is `.`, the new map contains `..` instead.
+* If the tile is `@`, the new map contains `@.` instead.
+
+This will produce a new warehouse map which is twice as wide and with wide boxes that are represented by `[]`. (The robot does not change size.)
+
+The larger example from before would now look like this:
+
+```
+####################
+##....[]....[]..[]##
+##............[]..##
+##..[][]....[]..[]##
+##....[]@.....[]..##
+##[]##....[]......##
+##[]....[]....[]..##
+##..[][]..[]..[][]##
+##........[]......##
+####################
+```
+
+Because boxes are now twice as wide but the robot is still the same size and speed, boxes can be aligned such that they directly push two other boxes at once. For example, consider this situation:
+
+```
+#######
+#...#.#
+#.....#
+#..OO@#
+#..O..#
+#.....#
+#######
+
+<vv<<^^<<^^
+```
+
+After appropriately resizing this map, the robot would push around these boxes as follows:
+
+```
+Initial state:
+##############
+##......##..##
+##..........##
+##....[][]@.##
+##....[]....##
+##..........##
+##############
+
+Move <:
+##############
+##......##..##
+##..........##
+##...[][]@..##
+##....[]....##
+##..........##
+##############
+
+Move v:
+##############
+##......##..##
+##..........##
+##...[][]...##
+##....[].@..##
+##..........##
+##############
+
+Move v:
+##############
+##......##..##
+##..........##
+##...[][]...##
+##....[]....##
+##.......@..##
+##############
+
+Move <:
+##############
+##......##..##
+##..........##
+##...[][]...##
+##....[]....##
+##......@...##
+##############
+
+Move <:
+##############
+##......##..##
+##..........##
+##...[][]...##
+##....[]....##
+##.....@....##
+##############
+
+Move ^:
+##############
+##......##..##
+##...[][]...##
+##....[]....##
+##.....@....##
+##..........##
+##############
+
+Move ^:
+##############
+##......##..##
+##...[][]...##
+##....[]....##
+##.....@....##
+##..........##
+##############
+
+Move <:
+##############
+##......##..##
+##...[][]...##
+##....[]....##
+##....@.....##
+##..........##
+##############
+
+Move <:
+##############
+##......##..##
+##...[][]...##
+##....[]....##
+##...@......##
+##..........##
+##############
+
+Move ^:
+##############
+##......##..##
+##...[][]...##
+##...@[]....##
+##..........##
+##..........##
+##############
+
+Move ^:
+##############
+##...[].##..##
+##...@.[]...##
+##....[]....##
+##..........##
+##..........##
+##############
+```
+
+This warehouse also uses GPS to locate the boxes. For these larger boxes, distances are measured from the edge of the map to the closest edge of the box in question. So, the box shown below has a distance of `1` from the top edge of the map and `5` from the left edge of the map, resulting in a GPS coordinate of `100 * 1 + 5 = 105`.
+
+```
+##########
+##...[]...
+##........
+```
+
+In the scaled-up version of the larger example from above, after the robot has finished all of its moves, the warehouse would look like this:
+
+```
+####################
+##[].......[].[][]##
+##[]...........[].##
+##[]........[][][]##
+##[]......[]....[]##
+##..##......[]....##
+##..[]............##
+##..@......[].[][]##
+##......[][]..[]..##
+####################
+```
+
+The sum of these boxes' GPS coordinates is **`9021`**.
+
+Predict the motion of the robot and boxes in this new, scaled-up warehouse. **What is the sum of all boxes' final GPS coordinates?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxNSIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "15", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Tools
+
+### Tools - Code
+
+```elixir
+defmodule Matrix do
+  def size(matrix) do
+    rows = matrix |> length()
+    cols = matrix |> hd() |> length()
+
+    {rows, cols}
+  end
+
+  def value(matrix, {x, y}) do
+    {rows, cols} = size(matrix)
+
+    if (x >= 0 and x < cols) and (y >= 0 and y < rows) do
+      matrix
+      |> Enum.at(y, [])
+      |> Enum.at(x)
+    else
+      nil
+    end
+  end
+end
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    [warehouse, movements] =
+      input
+      |> String.split("\n\n", trim: true)
+
+    matrix =
+      warehouse
+      |> String.split("\n", trim: true)
+      |> Enum.map(&String.codepoints(&1))
+
+    {rows, cols} = Matrix.size(matrix)
+
+    warehouse =
+      for x <- 0..(cols - 1), y <- 0..(rows - 1), reduce: %{} do
+        warehouse ->
+          Map.put(warehouse, {x, y}, Matrix.value(matrix, {x, y}))
+      end
+
+    movements =
+      movements
+      |> String.split("\n", trim: true)
+      |> Enum.map(&String.codepoints(&1))
+      |> List.flatten()
+
+    [{rows, cols}, warehouse, movements]
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  ########
+  #..O.O.#
+  ##@.O..#
+  #...O..#
+  #.#.O..#
+  #...O..#
+  #......#
+  ########
+
+  <^^>>>vv<v>>v<<
+  """
+  @expected [
+    {8, 8},
+    %{
+      {0, 0} => "#",
+      {1, 0} => "#",
+      {2, 0} => "#",
+      {3, 0} => "#",
+      {4, 0} => "#",
+      {5, 0} => "#",
+      {6, 0} => "#",
+      {7, 0} => "#",
+      {0, 1} => "#",
+      {1, 1} => ".",
+      {2, 1} => ".",
+      {3, 1} => "O",
+      {4, 1} => ".",
+      {5, 1} => "O",
+      {6, 1} => ".",
+      {7, 1} => "#",
+      {0, 2} => "#",
+      {1, 2} => "#",
+      {2, 2} => "@",
+      {3, 2} => ".",
+      {4, 2} => "O",
+      {5, 2} => ".",
+      {6, 2} => ".",
+      {7, 2} => "#",
+      {0, 3} => "#",
+      {1, 3} => ".",
+      {2, 3} => ".",
+      {3, 3} => ".",
+      {4, 3} => "O",
+      {5, 3} => ".",
+      {6, 3} => ".",
+      {7, 3} => "#",
+      {0, 4} => "#",
+      {1, 4} => ".",
+      {2, 4} => "#",
+      {3, 4} => ".",
+      {4, 4} => "O",
+      {5, 4} => ".",
+      {6, 4} => ".",
+      {7, 4} => "#",
+      {0, 5} => "#",
+      {1, 5} => ".",
+      {2, 5} => ".",
+      {3, 5} => ".",
+      {4, 5} => "O",
+      {5, 5} => ".",
+      {6, 5} => ".",
+      {7, 5} => "#",
+      {0, 6} => "#",
+      {1, 6} => ".",
+      {2, 6} => ".",
+      {3, 6} => ".",
+      {4, 6} => ".",
+      {5, 6} => ".",
+      {6, 6} => ".",
+      {7, 6} => "#",
+      {0, 7} => "#",
+      {1, 7} => "#",
+      {2, 7} => "#",
+      {3, 7} => "#",
+      {4, 7} => "#",
+      {5, 7} => "#",
+      {6, 7} => "#",
+      {7, 7} => "#"
+    },
+    ["<", "^", "^", ">", ">", ">", "v", "v", "<", "v", ">", ">", "v", "<", "<"]
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+<!-- livebook:{"branch_parent_index":3} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    [size, init_warehouse, movements] =
+      input
+      |> Parser.parse()
+
+    init_robot =
+      init_warehouse
+      |> Enum.find(fn {_, value} -> value == "@" end)
+      |> (fn {point, _} -> point end).()
+
+    movements
+    |> Enum.reduce({init_warehouse, init_robot}, fn movement, {warehouse, robot} ->
+      compute_movement(size, warehouse, movement, robot)
+    end)
+    |> (fn {warehouse, _} -> warehouse end).()
+    |> Enum.filter(fn {_, value} -> value == "O" end)
+    |> Enum.map(fn {{x, y}, _} -> 100 * y + x end)
+    |> Enum.sum()
+  end
+
+  def compute_movement({rows, cols}, warehouse, movement, {x, y}) do
+    case movement do
+      "^" ->
+        move(:up, {rows, cols}, warehouse, {x, y})
+
+      ">" ->
+        move(:right, {rows, cols}, warehouse, {x, y})
+
+      "v" ->
+        move(:down, {rows, cols}, warehouse, {x, y})
+
+      "<" ->
+        move(:left, {rows, cols}, warehouse, {x, y})
+    end
+  end
+
+  def move(:up, _, warehouse, {x, y}) do
+    y_next =
+      (y - 1)..0//-1
+      |> Enum.find(fn y ->
+        value = Map.get(warehouse, {x, y})
+
+        value == "." or value == "#"
+      end)
+
+    value = Map.get(warehouse, {x, y_next})
+
+    case value do
+      "." ->
+        warehouse =
+          warehouse
+          |> Map.update!({x, y}, fn _ -> "." end)
+          |> Map.update!({x, y - 1}, fn _ -> "@" end)
+
+        warehouse =
+          if y - 1 == y_next do
+            warehouse
+          else
+            warehouse
+            |> Map.update!({x, y_next}, fn _ -> "O" end)
+          end
+
+        {warehouse, {x, y - 1}}
+
+      "#" ->
+        {warehouse, {x, y}}
+    end
+  end
+
+  def move(:down, {rows, _}, warehouse, {x, y}) do
+    y_next =
+      (y + 1)..(rows - 1)
+      |> Enum.find(fn y ->
+        value = Map.get(warehouse, {x, y})
+
+        value == "." or value == "#"
+      end)
+
+    value = Map.get(warehouse, {x, y_next})
+
+    case value do
+      "." ->
+        warehouse =
+          warehouse
+          |> Map.update!({x, y}, fn _ -> "." end)
+          |> Map.update!({x, y + 1}, fn _ -> "@" end)
+
+        warehouse =
+          if y + 1 == y_next do
+            warehouse
+          else
+            warehouse
+            |> Map.update!({x, y_next}, fn _ -> "O" end)
+          end
+
+        {warehouse, {x, y + 1}}
+
+      "#" ->
+        {warehouse, {x, y}}
+    end
+  end
+
+  def move(:left, _, warehouse, {x, y}) do
+    x_next =
+      (x - 1)..0
+      |> Enum.find(fn x ->
+        value = Map.get(warehouse, {x, y})
+
+        value == "." or value == "#"
+      end)
+
+    value = Map.get(warehouse, {x_next, y})
+
+    case value do
+      "." ->
+        warehouse =
+          warehouse
+          |> Map.update!({x, y}, fn _ -> "." end)
+          |> Map.update!({x - 1, y}, fn _ -> "@" end)
+
+        warehouse =
+          if x - 1 == x_next do
+            warehouse
+          else
+            warehouse
+            |> Map.update!({x_next, y}, fn _ -> "O" end)
+          end
+
+        {warehouse, {x - 1, y}}
+
+      "#" ->
+        {warehouse, {x, y}}
+    end
+  end
+
+  def move(:right, {_, cols}, warehouse, {x, y}) do
+    x_next =
+      (x + 1)..(cols - 1)
+      |> Enum.find(fn x ->
+        value = Map.get(warehouse, {x, y})
+
+        value == "." or value == "#"
+      end)
+
+    value = Map.get(warehouse, {x_next, y})
+
+    case value do
+      "." ->
+        warehouse =
+          warehouse
+          |> Map.update!({x, y}, fn _ -> "." end)
+          |> Map.update!({x + 1, y}, fn _ -> "@" end)
+
+        warehouse =
+          if x + 1 == x_next do
+            warehouse
+          else
+            warehouse
+            |> Map.update!({x_next, y}, fn _ -> "O" end)
+          end
+
+        {warehouse, {x + 1, y}}
+
+      "#" ->
+        {warehouse, {x, y}}
+    end
+  end
+end
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  ########
+  #..O.O.#
+  ##@.O..#
+  #...O..#
+  #.#.O..#
+  #...O..#
+  #......#
+  ########
+
+  <^^>>>vv<v>>v<<
+  """
+  @expected 2028
+
+  test "part one A" do
+    assert run(@input) == @expected
+  end
+
+  @input """
+  ##########
+  #..O..O.O#
+  #......O.#
+  #.OO..O.O#
+  #..O@..O.#
+  #O#..O...#
+  #O..O..O.#
+  #.OO.O.OO#
+  #....O...#
+  ##########
+
+  <vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+  vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+  ><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+  <<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+  ^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+  ^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+  >^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+  <><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+  ^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+  v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+  """
+  @expected 10092
+
+  test "part one B" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":3} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    [size, init_warehouse, movements] =
+      input
+      |> resize()
+      |> Parser.parse()
+
+    init_robot =
+      init_warehouse
+      |> Enum.find(fn {_, value} -> value == "@" end)
+      |> (fn {point, _} -> point end).()
+
+    movements
+    |> Enum.reduce({init_warehouse, init_robot}, fn movement, {warehouse, robot} ->
+      compute_movement(size, warehouse, movement, robot)
+    end)
+    |> (fn {warehouse, _} -> warehouse end).()
+    |> Enum.filter(fn {_, value} -> value == "[" end)
+    |> Enum.map(fn {{x, y}, _} -> 100 * y + x end)
+    |> Enum.sum()
+  end
+
+  def resize(input) do
+    [warehouse, movements] =
+      input
+      |> String.split("\n\n", trim: true)
+
+    warehouse =
+      warehouse
+      |> String.split("\n", trim: true)
+      |> Enum.map(fn line ->
+        line
+        |> String.codepoints()
+        |> Enum.map(fn tile ->
+          case tile do
+            "#" ->
+              "##"
+
+            "O" ->
+              "[]"
+
+            "." ->
+              ".."
+
+            "@" ->
+              "@."
+          end
+        end)
+        |> Enum.join()
+      end)
+      |> Enum.join("\n")
+
+    [warehouse, movements]
+    |> Enum.join("\n\n")
+  end
+
+  def compute_movement({rows, cols}, warehouse, movement, {x, y}) do
+    case movement do
+      "^" ->
+        move(:up, {rows, cols}, warehouse, {x, y})
+
+      ">" ->
+        move(:right, {rows, cols}, warehouse, {x, y})
+
+      "v" ->
+        move(:down, {rows, cols}, warehouse, {x, y})
+
+      "<" ->
+        move(:left, {rows, cols}, warehouse, {x, y})
+    end
+  end
+
+  def move(:up, _, warehouse, {x, y}) do
+    if can_move_up?(warehouse, {x, y}) do
+      move_up_points(warehouse, {x, y}, MapSet.new())
+      |> Enum.group_by(fn {_, y} -> y end)
+      |> Enum.sort(fn {a, _}, {b, _} -> a < b end)
+      |> Enum.map(fn {_, points} -> points end)
+      |> Enum.reduce({warehouse, {x, y - 1}}, fn points, {warehouse, robot} ->
+        points
+        |> Enum.reduce({warehouse, robot}, fn {x, y}, {warehouse, robot} ->
+          backup = Map.get(warehouse, {x, y})
+
+          warehouse =
+            warehouse
+            |> Map.update!({x, y - 1}, fn _ -> backup end)
+            |> Map.update!({x, y}, fn _ -> "." end)
+
+          {warehouse, robot}
+        end)
+      end)
+    else
+      {warehouse, {x, y}}
+    end
+  end
+
+  def move(:down, _, warehouse, {x, y}) do
+    if can_move_down?(warehouse, {x, y}) do
+      move_down_points(warehouse, {x, y}, MapSet.new())
+      |> Enum.group_by(fn {_, y} -> y end)
+      |> Enum.sort(fn {a, _}, {b, _} -> a > b end)
+      |> Enum.map(fn {_, points} -> points end)
+      |> Enum.reduce({warehouse, {x, y + 1}}, fn points, {warehouse, robot} ->
+        points
+        |> Enum.reduce({warehouse, robot}, fn {x, y}, {warehouse, robot} ->
+          backup = Map.get(warehouse, {x, y})
+
+          warehouse =
+            warehouse
+            |> Map.update!({x, y + 1}, fn _ -> backup end)
+            |> Map.update!({x, y}, fn _ -> "." end)
+
+          {warehouse, robot}
+        end)
+      end)
+    else
+      {warehouse, {x, y}}
+    end
+  end
+
+  def move(:left, _, warehouse, {x, y}) do
+    x_next =
+      (x - 1)..0
+      |> Enum.find(fn x ->
+        value = Map.get(warehouse, {x, y})
+
+        value == "." or value == "#"
+      end)
+
+    value = Map.get(warehouse, {x_next, y})
+
+    case value do
+      "." ->
+        warehouse =
+          if x - 1 == x_next do
+            warehouse
+            |> Map.update!({x, y}, fn _ -> "." end)
+            |> Map.update!({x - 1, y}, fn _ -> "@" end)
+          else
+            (x_next + 1)..x
+            |> Enum.reduce(warehouse, fn x, warehouse ->
+              backup = Map.get(warehouse, {x, y})
+
+              warehouse
+              |> Map.update!({x - 1, y}, fn _ -> backup end)
+              |> Map.update!({x, y}, fn _ -> "." end)
+            end)
+          end
+
+        {warehouse, {x - 1, y}}
+
+      "#" ->
+        {warehouse, {x, y}}
+    end
+  end
+
+  def move(:right, {_, cols}, warehouse, {x, y}) do
+    x_next =
+      (x + 1)..(cols - 1)
+      |> Enum.find(fn x ->
+        value = Map.get(warehouse, {x, y})
+
+        value == "." or value == "#"
+      end)
+
+    value = Map.get(warehouse, {x_next, y})
+
+    case value do
+      "." ->
+        warehouse =
+          if x + 1 == x_next do
+            warehouse
+            |> Map.update!({x, y}, fn _ -> "." end)
+            |> Map.update!({x + 1, y}, fn _ -> "@" end)
+          else
+            (x_next - 1)..x//-1
+            |> Enum.reduce(warehouse, fn x, warehouse ->
+              backup = Map.get(warehouse, {x, y})
+
+              warehouse
+              |> Map.update!({x + 1, y}, fn _ -> backup end)
+              |> Map.update!({x, y}, fn _ -> "." end)
+            end)
+          end
+
+        {warehouse, {x + 1, y}}
+
+      "#" ->
+        {warehouse, {x, y}}
+    end
+  end
+
+  def can_move_up?(warehouse, {x, y}) do
+    case Map.get(warehouse, {x, y}) do
+      "@" ->
+        can_move_up?(warehouse, {x, y - 1})
+
+      "[" ->
+        can_move_up?(warehouse, {x, y - 1}) and can_move_up?(warehouse, {x + 1, y - 1})
+
+      "]" ->
+        can_move_up?(warehouse, {x, y - 1}) and can_move_up?(warehouse, {x - 1, y - 1})
+
+      "." ->
+        true
+
+      "#" ->
+        false
+    end
+  end
+
+  def can_move_down?(warehouse, {x, y}) do
+    case Map.get(warehouse, {x, y}) do
+      "@" ->
+        can_move_down?(warehouse, {x, y + 1})
+
+      "[" ->
+        can_move_down?(warehouse, {x, y + 1}) and can_move_down?(warehouse, {x + 1, y + 1})
+
+      "]" ->
+        can_move_down?(warehouse, {x, y + 1}) and can_move_down?(warehouse, {x - 1, y + 1})
+
+      "." ->
+        true
+
+      "#" ->
+        false
+    end
+  end
+
+  def move_up_points(warehouse, {x, y}, points) do
+    case Map.get(warehouse, {x, y}) do
+      "@" ->
+        points = points |> MapSet.put({x, y})
+        move_up_points(warehouse, {x, y - 1}, points)
+
+      "[" ->
+        points = points |> MapSet.put({x, y}) |> MapSet.put({x + 1, y})
+
+        MapSet.union(
+          move_up_points(warehouse, {x, y - 1}, points),
+          move_up_points(warehouse, {x + 1, y - 1}, points)
+        )
+
+      "]" ->
+        points = points |> MapSet.put({x, y}) |> MapSet.put({x - 1, y})
+
+        MapSet.union(
+          move_up_points(warehouse, {x, y - 1}, points),
+          move_up_points(warehouse, {x - 1, y - 1}, points)
+        )
+
+      "." ->
+        points
+    end
+  end
+
+  def move_down_points(warehouse, {x, y}, points) do
+    case Map.get(warehouse, {x, y}) do
+      "@" ->
+        points = points |> MapSet.put({x, y})
+        move_down_points(warehouse, {x, y + 1}, points)
+
+      "[" ->
+        points = points |> MapSet.put({x, y}) |> MapSet.put({x + 1, y})
+
+        MapSet.union(
+          move_down_points(warehouse, {x, y + 1}, points),
+          move_down_points(warehouse, {x + 1, y + 1}, points)
+        )
+
+      "]" ->
+        points = points |> MapSet.put({x, y}) |> MapSet.put({x - 1, y})
+
+        MapSet.union(
+          move_down_points(warehouse, {x, y + 1}, points),
+          move_down_points(warehouse, {x - 1, y + 1}, points)
+        )
+
+      "." ->
+        points
+    end
+  end
+
+  ###############################################################################33
+  def print(warehouse, {rows, cols}) do
+    for y <- 0..(rows - 1) do
+      for x <- 0..(cols - 1) do
+        Map.get(warehouse, {x, y})
+      end
+    end
+    |> Enum.map(&Enum.join(&1))
+    |> Enum.join("\n")
+    |> IO.puts()
+
+    warehouse
+  end
+
+  def demo do
+    [size, init_warehouse, movements] =
+      """
+      ##############
+      ##......##..##
+      ##..........##
+      ##....[][]@.##
+      ##....[]....##
+      ##..........##
+      ##############
+
+      <vv<<^^<<^^
+      """
+      |> Parser.parse()
+
+    init_robot =
+      init_warehouse
+      |> Enum.find(fn {_, value} -> value == "@" end)
+      |> (fn {point, _} -> point end).()
+
+    movements
+    |> Enum.reduce({init_warehouse, init_robot}, fn movement, {warehouse, robot} ->
+      compute_movement(size, warehouse, movement, robot)
+    end)
+    |> (fn {warehouse, _} -> warehouse end).()
+    |> print(size)
+  end
+end
+```
+
+```elixir
+PartTwo.demo()
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input """
+  ##########
+  #..O..O.O#
+  #......O.#
+  #.OO..O.O#
+  #..O@..O.#
+  #O#..O...#
+  #O..O..O.#
+  #.OO.O.OO#
+  #....O...#
+  ##########
+
+  <vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+  vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+  ><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+  <<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+  ^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+  ^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+  >^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+  <><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+  ^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+  v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+  """
+  @expected """
+  ####################
+  ##....[]....[]..[]##
+  ##............[]..##
+  ##..[][]....[]..[]##
+  ##....[]@.....[]..##
+  ##[]##....[]......##
+  ##[]....[]....[]..##
+  ##..[][]..[]..[][]##
+  ##........[]......##
+  ####################
+
+  <vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+  vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+  ><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+  <<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+  ^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+  ^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+  >^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+  <><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+  ^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+  v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+  """
+
+  test "part two resize" do
+    assert resize(@input) == @expected
+  end
+
+  @input """
+  ##########
+  #..O..O.O#
+  #......O.#
+  #.OO..O.O#
+  #..O@..O.#
+  #O#..O...#
+  #O..O..O.#
+  #.OO.O.OO#
+  #....O...#
+  ##########
+
+  <vv>^<v^>v>^vv^v>v<>v^v<v<^vv<<<^><<><>>v<vvv<>^v^>^<<<><<v<<<v^vv^v>^
+  vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
+  ><>vv>v^v^<>><>>>><^^>vv>v<^^^>>v^v^<^^>v^^>v^<^v>v<>>v^v^<v>v^^<^^vv<
+  <<v<^>>^^^^>>>v^<>vvv^><v<<<>^^^vv^<vvv>^>v<^^^^v<>^>vvvv><>>v^<<^^^^^
+  ^><^><>>><>^^<<^^v>>><^<v>^<vv>>v>>>^v><>^v><<<<v>>v<v<v>vvv>^<><<>^><
+  ^>><>^v<><^vvv<^^<><v<<<<<><^v<<<><<<^^<v<^^^><^>>^<v^><<<^>>^v<v^v<v^
+  >^>>^v>vv>^<<^v<>><<><<v<<v><>v<^vv<<<>^^v^>^^>>><<^v>>v^v><^^>>^<>vv^
+  <><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
+  ^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
+  v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
+  """
+  @expected 9021
+
+  test "part two" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":29815,"stamp":{"token":"XCP.0zzJ0aME1gnk2Ab8wRhcR_aoISR6i2iG-H3D_8UGVeibo6AcQl5s12XwEkM8bNEUyi6-v6WGVwXXvVNCylWdA1kO9fmPslkKP8CDXzX26UKktA2gIpE","version":2}} -->
