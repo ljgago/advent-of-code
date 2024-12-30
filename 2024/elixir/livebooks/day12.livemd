@@ -1,0 +1,866 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2024 - Day 12
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 12: Garden Groups ---
+
+Why not search for the Chief Historian near the [gardener](https://adventofcode.com/2023/day/5) and his [massive farm](https://adventofcode.com/2023/day/21)? There's plenty of food, so The Historians grab something to eat while they search.
+
+You're about to settle near a complex arrangement of garden plots when some Elves ask if you can lend a hand. They'd like to set up fences around each region of garden plots, but they can't figure out how much fence they need to order or how much it will cost. They hand you a map (your puzzle input) of the garden plots.
+
+Each garden plot grows only a single type of plant and is indicated by a single letter on your map. When multiple garden plots are growing the same type of plant and are touching (horizontally or vertically), they form a **region**. For example:
+
+```
+AAAA
+BBCD
+BBCC
+EEEC
+```
+
+This 4x4 arrangement includes garden plots growing five different types of plants (labeled `A`, `B`, `C`, `D`, and `E`), each grouped into their own region.
+
+In order to accurately calculate the cost of the fence around a single region, you need to know that region's **area** and **perimeter**.
+
+The **area** of a region is simply the number of garden plots the region contains. The above map's type `A`, `B`, and `C` plants are each in a region of area `4`. The type `E` plants are in a region of area `3`; the type `D` plants are in a region of area `1`.
+
+Each garden plot is a square and so has **four sides**. The **perimeter** of a region is the number of sides of garden plots in the region that do not touch another garden plot in the same region. The type `A` and `C` plants are each in a region with perimeter `10`. The type `B` and `E` plants are each in a region with perimeter `8`. The lone `D` plot forms its own region with perimeter `4`.
+
+Visually indicating the sides of plots in each region that contribute to the perimeter using `-` and `|`, the above map's regions' perimeters are measured as follows:
+
+```
++-+-+-+-+
+|A A A A|
++-+-+-+-+     +-+
+              |D|
++-+-+   +-+   +-+
+|B B|   |C|
++   +   + +-+
+|B B|   |C C|
++-+-+   +-+ +
+          |C|
++-+-+-+   +-+
+|E E E|
++-+-+-+
+```
+
+Plants of the same type can appear in multiple separate regions, and regions can even appear within other regions. For example:
+
+```
+OOOOO
+OXOXO
+OOOOO
+OXOXO
+OOOOO
+```
+
+The above map contains **five** regions, one containing all of the `O` garden plots, and the other four each containing a single `X` plot.
+
+The four `X` regions each have area `1` and perimeter `4`. The region containing `21` type `O` plants is more complicated; in addition to its outer edge contributing a perimeter of `20`, its boundary with each `X` region contributes an additional `4` to its perimeter, for a total perimeter of `36`.
+
+Due to "modern" business practices, the price of fence required for a region is found by multiplying that region's area by its perimeter. The total price of fencing all regions on a map is found by adding together the price of fence for every region on the map.
+
+In the first example, region A has price `4 * 10 = 40`, region `B` has price `4 * 8 = 32`, region `C` has price `4 * 10 = 40`, region `D` has price `1 * 4 = 4`, and region `E` has price `3 * 8 = 24`. So, the total price for the first example is **`140`**.
+
+In the second example, the region with all of the `O` plants has price `21 * 36 = 756`, and each of the four smaller `X` regions has price `1 * 4 = 4`, for a total price of **`772`** (`756 + 4 + 4 + 4 + 4`).
+
+Here's a larger example:
+
+```
+RRRRIICCFF
+RRRRIICCCF
+VVRRRCCFFF
+VVRCCCJFFF
+VVVVCJJCFE
+VVIVCCJJEE
+VVIIICJJEE
+MIIIIIJJEE
+MIIISIJEEE
+MMMISSJEEE
+```
+
+It contains:
+
+* A region of `R` plants with price `12 * 18 = 216`.
+* A region of `I` plants with price `4 * 8 = 32`.
+* A region of `C` plants with price `14 * 28 = 392`.
+* A region of `F` plants with price `10 * 18 = 180`.
+* A region of `V` plants with price `13 * 20 = 260`.
+* A region of `J` plants with price `11 * 20 = 220`.
+* A region of `C` plants with price `1 * 4 = 4`.
+* A region of `E` plants with price `13 * 18 = 234`.
+* A region of `I` plants with price `14 * 22 = 308`.
+* A region of `M` plants with price `5 * 12 = 60`.
+* A region of `S` plants with price `3 * 8 = 24`.
+
+So, it has a total price of **`1930`**.
+
+**What is the total price of fencing all regions on your map?**
+
+### --- Part Two ---
+
+Fortunately, the Elves are trying to order so much fence that they qualify for a **bulk discount**!
+
+Under the bulk discount, instead of using the perimeter to calculate the price, you need to use the **number of sides** each region has. Each straight section of fence counts as a side, regardless of how long it is.
+
+Consider this example again:
+
+```
+AAAA
+BBCD
+BBCC
+EEEC
+```
+
+The region containing type `A` plants has `4` sides, as does each of the regions containing plants of type `B`, `D`, and `E`. However, the more complex region containing the plants of type `C` has `8` sides!
+
+Using the new method of calculating the per-region price by multiplying the region's area by its number of sides, regions `A` through `E` have prices `16`, `16`, `32`, `4`, and `12`, respectively, for a total price of **`80`**.
+
+The second example above (full of type `X` and `O` plants) would have a total price of **`436`**.
+
+Here's a map that includes an E-shaped region full of type `E` plants:
+
+```
+EEEEE
+EXXXX
+EEEEE
+EXXXX
+EEEEE
+```
+
+The E-shaped region has an area of `17` and `12` sides for a price of `204`. Including the two regions full of type X plants, this map has a total price of **`236`**.
+
+This map has a total price of **`368`**:
+
+```
+AAAAAA
+AAABBA
+AAABBA
+ABBAAA
+ABBAAA
+AAAAAA
+```
+
+It includes two regions full of type `B` plants (each with `4` sides) and a single region full of type `A` plants (with `4` sides on the outside and `8` more sides on the inside, a total of `12` sides). Be especially careful when counting the fence around regions like the one full of type `A` plants; in particular, each section of fence has an in-side and an out-side, so the fence does not connect across the middle of the region (where the two `B` regions touch diagonally). (The Elves would have used the Möbius Fencing Company instead, but their contract terms were too one-sided.)
+
+The larger example from before now has the following updated prices:
+
+* A region of `R` plants with price `12 * 10 = 120`.
+* A region of `I` plants with price `4 * 4 = 16`.
+* A region of `C` plants with price `14 * 22 = 308`.
+* A region of `F` plants with price `10 * 12 = 120`.
+* A region of `V` plants with price `13 * 10 = 130`.
+* A region of `J` plants with price `11 * 12 = 132`.
+* A region of `C` plants with price `1 * 4 = 4`.
+* A region of `E` plants with price `13 * 8 = 104`.
+* A region of `I` plants with price `14 * 16 = 224`.
+* A region of `M` plants with price `5 * 6 = 30`.
+* A region of `S` plants with price `3 * 6 = 18`.
+
+Adding these together produces its new total price of **`1206`**.
+
+**What is the new total price of fencing all regions on your map?**
+
+## Puzzle
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxMiIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "12", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&String.codepoints(&1))
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  AAAA
+  BBCD
+  BBCC
+  EEEC
+  """
+  @expected [
+    ["A", "A", "A", "A"],
+    ["B", "B", "C", "D"],
+    ["B", "B", "C", "C"],
+    ["E", "E", "E", "C"]
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+## Tools
+
+### Tools - Code
+
+```elixir
+defmodule Matrix do
+  def size(matrix) do
+    rows = matrix |> length()
+    cols = matrix |> hd() |> length()
+
+    {rows, cols}
+  end
+
+  def value(matrix, {i, j}) do
+    {rows, cols} = size(matrix)
+
+    if (i >= 0 and i < rows) and (j >= 0 and j < cols) do
+      matrix
+      |> Enum.at(i, [])
+      |> Enum.at(j)
+    else
+      nil
+    end
+  end
+end
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  use Agent
+
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    garden = Parser.parse(input)
+    plants = compute_plants(garden)
+
+    compute_all_regions_from_plants(plants)
+    |> Map.to_list()
+    |> Enum.map(fn {_, regions} ->
+      regions
+      |> Enum.map(fn region ->
+        area = compute_area(region)
+        perimeter = compute_perimeter(region)
+
+        area * perimeter
+      end)
+    end)
+    |> List.flatten()
+    |> Enum.sum()
+  end
+
+  def compute_plants(garden) do
+    {rows, cols} = Matrix.size(garden)
+
+    for i <- 0..(rows - 1), j <- 0..(cols - 1), reduce: %{} do
+      plants ->
+        plant = Matrix.value(garden, {i, j})
+
+        Map.update(plants, plant, MapSet.new([{i, j}]), &MapSet.put(&1, {i, j}))
+    end
+  end
+
+  def compute_all_regions_from_plants(plants) do
+    plants
+    |> Map.to_list()
+    |> Enum.reduce(%{}, fn {name, points}, plant_regions ->
+      regions = loop_while(points, [])
+      Map.put(plant_regions, name, regions)
+    end)
+  end
+
+  def loop_while(points, acc) do
+    Agent.start_link(fn -> MapSet.new() end, name: __MODULE__)
+
+    start = MapSet.to_list(points) |> hd()
+    region = compute_one_region_from_plants(points, start)
+
+    Agent.stop(__MODULE__)
+
+    acc = [region | acc]
+    new_points = MapSet.symmetric_difference(points, region)
+
+    case MapSet.size(new_points) do
+      0 -> acc
+      _ -> loop_while(new_points, acc)
+    end
+  end
+
+  def compute_one_region_from_plants(points, {i, j}) do
+    region = Agent.get(__MODULE__, & &1)
+
+    if MapSet.member?(points, {i, j}) and !MapSet.member?(region, {i, j}) do
+      Agent.update(__MODULE__, &MapSet.put(&1, {i, j}))
+
+      compute_one_region_from_plants(points, {i - 1, j})
+      compute_one_region_from_plants(points, {i + 1, j})
+      compute_one_region_from_plants(points, {i, j - 1})
+      compute_one_region_from_plants(points, {i, j + 1})
+    else
+      region
+    end
+  end
+
+  def compute_area(region) do
+    region
+    |> MapSet.size()
+  end
+
+  def compute_perimeter(region) do
+    region
+    |> MapSet.to_list()
+    |> Enum.map(fn {i, j} ->
+      up =
+        case MapSet.member?(region, {i - 1, j}) do
+          true -> 0
+          false -> 1
+        end
+
+      down =
+        case MapSet.member?(region, {i + 1, j}) do
+          true -> 0
+          false -> 1
+        end
+
+      left =
+        case MapSet.member?(region, {i, j - 1}) do
+          true -> 0
+          false -> 1
+        end
+
+      right =
+        case MapSet.member?(region, {i, j + 1}) do
+          true -> 0
+          false -> 1
+        end
+
+      up + down + left + right
+    end)
+    |> Enum.sum()
+  end
+end
+```
+
+### Tests - Part 1
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input [
+    ["O", "O", "X", "X"],
+    ["O", "O", "X", "X"],
+    ["X", "X", "O", "O"],
+    ["X", "X", "O", "O"]
+  ]
+  @expected %{
+    "O" => [
+      MapSet.new([{2, 2}, {2, 3}, {3, 2}, {3, 3}]),
+      MapSet.new([{0, 0}, {0, 1}, {1, 0}, {1, 1}])
+    ],
+    "X" => [
+      MapSet.new([{2, 0}, {2, 1}, {3, 0}, {3, 1}]),
+      MapSet.new([{0, 2}, {0, 3}, {1, 2}, {1, 3}])
+    ]
+  }
+
+  test "part one - all regions from plants 1" do
+    assert @input |> compute_plants() |> compute_all_regions_from_plants() == @expected
+  end
+
+  @input [
+    ["O", "O", "O", "O", "O"],
+    ["O", "X", "O", "X", "O"],
+    ["O", "O", "O", "O", "O"],
+    ["O", "X", "O", "X", "O"],
+    ["O", "O", "O", "O", "O"]
+  ]
+  @expected %{
+    "O" => [
+      MapSet.new([
+        {0, 0},
+        {0, 1},
+        {0, 2},
+        {0, 3},
+        {0, 4},
+        {1, 0},
+        {1, 2},
+        {1, 4},
+        {2, 0},
+        {2, 1},
+        {2, 2},
+        {2, 3},
+        {2, 4},
+        {3, 0},
+        {3, 2},
+        {3, 4},
+        {4, 0},
+        {4, 1},
+        {4, 2},
+        {4, 3},
+        {4, 4}
+      ])
+    ],
+    "X" => [
+      MapSet.new([{3, 3}]),
+      MapSet.new([{3, 1}]),
+      MapSet.new([{1, 3}]),
+      MapSet.new([{1, 1}])
+    ]
+  }
+
+  test "part one - all regions from plants 2" do
+    assert @input |> compute_plants() |> compute_all_regions_from_plants() == @expected
+  end
+
+  @input """
+  AAAA
+  BBCD
+  BBCC
+  EEEC
+  """
+  @expected 140
+
+  test "part one 1" do
+    assert run(@input) == @expected
+  end
+
+  @input """
+  OOOOO
+  OXOXO
+  OOOOO
+  OXOXO
+  OOOOO
+  """
+  @expected 772
+
+  test "part one 2" do
+    assert run(@input) == @expected
+  end
+
+  @input """
+  RRRRIICCFF
+  RRRRIICCCF
+  VVRRRCCFFF
+  VVRCCCJFFF
+  VVVVCJJCFE
+  VVIVCCJJEE
+  VVIIICJJEE
+  MIIIIIJJEE
+  MIIISIJEEE
+  MMMISSJEEE
+  """
+  @expected 1930
+
+  test "part one 4" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":2} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    garden = Parser.parse(input)
+    plants = PartOne.compute_plants(garden)
+
+    PartOne.compute_all_regions_from_plants(plants)
+    |> Map.to_list()
+    |> Enum.map(fn {_type, regions} ->
+      regions
+      |> Enum.map(fn region ->
+        area = PartOne.compute_area(region)
+        sides = compute_sides(region)
+
+        # IO.inspect("AREA: #{area}")
+        # IO.inspect("SIDES: #{sides}")
+
+        # IO.inspect(type)
+        # IO.inspect(region)
+        # IO.inspect("#{area} * #{sides} - #{area * sides}")
+
+        area * sides
+      end)
+    end)
+    |> List.flatten()
+    |> Enum.sum()
+  end
+
+  def compute_sides(region) do
+    # Count corners
+    #
+    # External corner (# -> match, . -> not match)
+    # 
+    # ##  ##  .#  #.
+    # #.  .#  ##  ##
+    #
+    # Internal coner (# -> match, . -> not match)
+    # 
+    # ..  ..  #.  .#
+    # .#  #.  ..  ..
+    
+  end
+
+  def generate_borders(region) do
+    [
+      [{-1, -1}, {-1, 0}, {-1, 1}],
+      [{0, -1}, {0, 0}, {0, 1}],
+      [{}]
+    ]
+  end
+end
+```
+
+```
++-+-+-+-+-+
+|E E E E E|
++   +-+-+-+
+|E E|
++   +-+-+-+
+|E E E E E|
++ +-+-+-+-+
+|E|
++ +-+-+-+-+
+|E E E E E|
++-+-+-+-+-+
+
+{1 + i * 2, 1 + j * 2}
+
+{0,0}, {0,1}, {1, 2}
+{1,1}, {1,3}, {1, 5}
+
+{1,0}
+{3, 1}
+```
+
+```elixir
+# def compute_sides(region) do
+#     region
+#     |> MapSet.to_list()
+#     |> Enum.reduce([[], []], fn {i, j}, [horizontal, vertical] ->
+#       up =
+#         case MapSet.member?(region, {i - 1, j}) do
+#           true -> nil
+#           false -> {i - 1, j}
+#         end
+
+#       down =
+#         case MapSet.member?(region, {i + 1, j}) do
+#           true -> nil
+#           false -> {i + 1, j}
+#         end
+
+#       left =
+#         case MapSet.member?(region, {i, j - 1}) do
+#           true -> nil
+#           false -> {i, j - 1}
+#         end
+
+#       right =
+#         case MapSet.member?(region, {i, j + 1}) do
+#           true -> nil
+#           false -> {i, j + 1}
+#         end
+
+#       horizontal =
+#         [up, down]
+#         |> Enum.filter(&(&1 != nil))
+#         |> (fn list -> horizontal ++ list end).()
+
+#       vertical =
+#         [left, right]
+#         |> Enum.filter(&(&1 != nil))
+#         |> (fn list -> vertical ++ list end).()
+
+#       [horizontal, vertical]
+#     end)
+#     #
+#     |> (fn [horizontal, vertical] ->
+#           horizontal =
+#             horizontal
+#             |> Enum.sort()
+#             |> Enum.group_by(fn {i, _} -> i end)
+#             |> Enum.map(fn {_, list} ->
+#               fix_dup =
+#                 list
+#                 |> Enum.frequencies()
+#                 |> Enum.reduce(0, fn {_, num}, acc ->
+#                   if num > 1 do
+#                     1
+#                   else
+#                     acc
+#                   end
+#                 end)
+
+#               list
+#               |> Enum.map(fn {_, j} -> j end)
+#               |> Enum.sort()
+#               |> Enum.uniq()
+#               |> Enum.chunk_every(2, 1, :discard)
+#               |> Enum.map(fn [a, b] -> abs(a - b) - 1 end)
+#               |> Enum.filter(&(&1 != 0))
+#               |> Enum.count()
+#               |> Kernel.+(1 + fix_dup)
+#             end)
+#             |> Enum.sum()
+
+#           vertical =
+#             vertical
+#             |> Enum.sort()
+#             |> Enum.group_by(fn {_, j} -> j end)
+#             |> Enum.map(fn {_, list} ->
+#               fix_dup =
+#                 list
+#                 |> Enum.frequencies()
+#                 |> Enum.reduce(0, fn {_, num}, acc ->
+#                   if num > 1 do
+#                     1
+#                   else
+#                     acc
+#                   end
+#                 end)
+
+#               list
+#               |> Enum.map(fn {i, _} -> i end)
+#               |> Enum.sort()
+#               |> Enum.uniq()
+#               |> Enum.chunk_every(2, 1, :discard)
+#               |> Enum.map(fn [a, b] -> abs(a - b) - 1 end)
+#               |> Enum.filter(&(&1 != 0))
+#               |> Enum.count()
+#               |> Kernel.+(1 + fix_dup)
+#             end)
+#             |> Enum.sum()
+
+#           horizontal + vertical
+#         end).()
+#   end
+```
+
+### Tests - Part 2
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  # @input MapSet.new([
+  #          {0, 0},
+  #          {0, 1},
+  #          {0, 2},
+  #          {0, 3},
+  #          {0, 4},
+  #          {0, 5},
+  #          {1, 0},
+  #          {1, 1},
+  #          {1, 2},
+  #          {1, 5},
+  #          {2, 0},
+  #          {2, 1},
+  #          {2, 2},
+  #          {2, 5},
+  #          {3, 0},
+  #          {3, 3},
+  #          {3, 4},
+  #          {3, 5},
+  #          {4, 0},
+  #          {4, 3},
+  #          {4, 4},
+  #          {4, 5},
+  #          {5, 0},
+  #          {5, 1},
+  #          {5, 2},
+  #          {5, 3},
+  #          {5, 4},
+  #          {5, 5}
+  #        ])
+  # @expected 12
+
+  # test "compute sides 1" do
+  #   assert compute_sides(@input) == @expected
+  # end
+
+  # @input MapSet.new([{3, 1}, {3, 2}, {4, 1}, {4, 2}])
+  # @expected 4
+
+  # test "compute sides 2" do
+  #   assert compute_sides(@input) == @expected
+  # end
+
+  # @input MapSet.new([
+  #          {0, 8},
+  #          {0, 9},
+  #          {1, 9},
+  #          {2, 7},
+  #          {2, 8},
+  #          {2, 9},
+  #          {3, 7},
+  #          {3, 8},
+  #          {3, 9},
+  #          {4, 8}
+  #        ])
+  # @expected 12
+
+  # test "compute sides 3" do
+  #   assert compute_sides(@input) == @expected
+  # end
+
+  # @input MapSet.new([
+  #          {0, 0},
+  #          {0, 1},
+  #          {0, 2},
+  #          {0, 3},
+  #          {0, 4},
+  #          {1, 0},
+  #          {2, 0},
+  #          {2, 1},
+  #          {2, 2},
+  #          {2, 3},
+  #          {2, 4},
+  #          {3, 0},
+  #          {4, 0},
+  #          {4, 1},
+  #          {4, 2},
+  #          {4, 3},
+  #          {4, 4}
+  #        ])
+
+  # @expected 12
+
+  # test "compute sides 4" do
+  #   assert compute_sides(@input) == @expected
+  # end
+
+  @input """
+  AAAA
+  BBCD
+  BBCC
+  EEEC
+  """
+  @expected 80
+
+  test "part two 1" do
+    assert run(@input) == @expected
+  end
+
+  @input """
+  EEEEE
+  EXXXX
+  EEEEE
+  EXXXX
+  EEEEE
+  """
+  @expected 236
+
+  test "part two 2" do
+    assert run(@input) == @expected
+  end
+
+  @input """
+  AAAAAA
+  AAABBA
+  AAABBA
+  ABBAAA
+  ABBAAA
+  AAAAAA
+  """
+  @expected 368
+
+  test "part two 3" do
+    assert run(@input) == @expected
+  end
+
+  @input """
+  RRRRIICCFF
+  RRRRIICCCF
+  VVRRRCCFFF
+  VVRCCCJFFF
+  VVVVCJJCFE
+  VVIVCCJJEE
+  VVIIICJJEE
+  MIIIIIJJEE
+  MIIISIJEEE
+  MMMISSJEEE
+  """
+  @expected 1206
+
+  test "part two 4" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":20492,"stamp":{"token":"XCP.HAW1OSPS5UlDvpZyxX04LOcuzy4uoNCsbyJrMUxl6H4sRT5DqGt68Dxf5M5H5xfmta2traotX0YEDP1Z5xVEExg7VrZVCl3ZopLZN3jtFWP6mNUGwQpsvdq2hprKYaHD7DuNvmUFsRqd","version":2}} -->
