@@ -5,10 +5,10 @@
 - [Day 3](livebooks/day03.livemd)
 - [Day 4](livebooks/day04.livemd)
 - [Day 5](livebooks/day05.livemd)
-- [Day 5](livebooks/day06.livemd)
-- [Day 5](livebooks/day07.livemd)
-- [Day 5](livebooks/day08.livemd)
-- [Day 5](livebooks/day09.livemd)
+- [Day 6](livebooks/day06.livemd)
+- [Day 7](livebooks/day07.livemd)
+- [Day 8](livebooks/day08.livemd)
+- [Day 9](livebooks/day09.livemd)
 - [Day 10](livebooks/day10.livemd)
 
 ## License
