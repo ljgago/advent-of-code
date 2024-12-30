@@ -1,0 +1,602 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2024 - Day 18
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 18: RAM Run ---
+
+You and The Historians look a lot more pixelated than you remember. You're [inside a computer](https://adventofcode.com/2017/day/2) at the North Pole!
+
+Just as you're about to check out your surroundings, a program runs up to you. "This region of memory isn't safe! The User misunderstood what a [pushdown automaton](https://en.wikipedia.org/wiki/Pushdown_automaton) is and their algorithm is pushing whole **bytes** down on top of us! Run!"
+
+The algorithm is fast - it's going to cause a byte to fall into your memory space once every [nanosecond](https://www.youtube.com/watch?v=9eyFDBPk4Yw)! Fortunately, you're **faster**, and by quickly scanning the algorithm, you create a **list of which bytes will fall** (your puzzle input) in the order they'll land in your memory space.
+
+Your memory space is a two-dimensional grid with coordinates that range from `0` to `70` both horizontally and vertically. However, for the sake of example, suppose you're on a smaller grid with coordinates that range from `0` to `6` and the following list of incoming byte positions:
+
+```
+5,4
+4,2
+4,5
+3,0
+2,1
+6,3
+2,4
+1,5
+0,6
+3,3
+2,6
+5,1
+1,2
+5,5
+2,5
+6,5
+1,4
+0,4
+6,4
+1,1
+6,1
+1,0
+0,5
+1,6
+2,0
+```
+
+Each byte position is given as an `X,Y` coordinate, where `X` is the distance from the left edge of your memory space and `Y` is the distance from the top edge of your memory space.
+
+You and The Historians are currently in the top left corner of the memory space (at `0,0`) and need to reach the exit in the bottom right corner (at `70,70` in your memory space, but at `6,6` in this example). You'll need to simulate the falling bytes to plan out where it will be safe to run; for now, simulate just the first few bytes falling into your memory space.
+
+As bytes fall into your memory space, they make that coordinate **corrupted**. Corrupted memory coordinates cannot be entered by you or The Historians, so you'll need to plan your route carefully. You also cannot leave the boundaries of the memory space; your only hope is to reach the exit.
+
+In the above example, if you were to draw the memory space after the first `12` bytes have fallen (using `.` for safe and `#` for corrupted), it would look like this:
+
+```
+...#...
+..#..#.
+....#..
+...#..#
+..#..#.
+.#..#..
+#.#....
+```
+
+You can take steps up, down, left, or right. After just 12 bytes have corrupted locations in your memory space, the shortest path from the top left corner to the exit would take **`22`** steps. Here (marked with `O`) is one such path:
+
+```
+OO.#OOO
+.O#OO#O
+.OOO#OO
+...#OO#
+..#OO#.
+.#.O#..
+#.#OOOO
+```
+
+Simulate the first kilobyte (`1024` bytes) falling onto your memory space. Afterward, **what is the minimum number of steps needed to reach the exit?**
+
+### --- Part Two ---
+
+The Historians aren't as used to moving around in this pixelated universe as you are. You're afraid they're not going to be fast enough to make it to the exit before the path is completely blocked.
+
+To determine how fast everyone needs to go, you need to determine **the first byte that will cut off the path to the exit**.
+
+In the above example, after the byte at `1,1` falls, there is still a path to the exit:
+
+```
+O..#OOO
+O##OO#O
+O#OO#OO
+OOO#OO#
+###OO##
+.##O###
+#.#OOOO
+```
+
+However, after adding the very next byte (at `6,1`), there is no longer a path to the exit:
+
+```
+...#...
+.##..##
+.#..#..
+...#..#
+###..##
+.##.###
+#.#....
+```
+
+So, in this example, the coordinates of the first byte that prevents the exit from being reachable are **`6,1`**.
+
+Simulate more of the bytes that are about to corrupt your memory space. **What are the coordinates of the first byte that will prevent the exit from being reachable from your starting position?** (Provide the answer as two integers separated by a comma with no other characters.)
+
+## Puzzle
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxOCIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "18", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Tools
+
+### Tools - Code
+
+```elixir
+defmodule NodeBase do
+  defstruct g: 0,
+            h: 0,
+            f: 0,
+            point: {0, 0}
+
+  def new(start, target, point)
+
+  def new({sx, sy}, {tx, ty}, {x, y}) do
+    g = abs(sx - x) + abs(sy - y)
+    h = abs(tx - x) + abs(ty - y)
+    f = g + h
+
+    %NodeBase{g: g, h: h, f: f, point: {x, y}}
+  end
+end
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn line -> 
+      line
+      |> String.split(",")
+      |> Enum.map(&String.to_integer(&1))
+      |> List.to_tuple()
+    end)
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  5,4
+  4,2
+  4,5
+  3,0
+  2,1
+  6,3
+  2,4
+  1,5
+  0,6
+  3,3
+  2,6
+  5,1
+  1,2
+  5,5
+  2,5
+  6,5
+  1,4
+  0,4
+  6,4
+  1,1
+  6,1
+  1,0
+  0,5
+  1,6
+  2,0
+  """
+  @expected [
+    {5, 4},
+    {4, 2},
+    {4, 5},
+    {3, 0},
+    {2, 1},
+    {6, 3},
+    {2, 4},
+    {1, 5},
+    {0, 6},
+    {3, 3},
+    {2, 6},
+    {5, 1},
+    {1, 2},
+    {5, 5},
+    {2, 5},
+    {6, 5},
+    {1, 4},
+    {0, 4},
+    {6, 4},
+    {1, 1},
+    {6, 1},
+    {1, 0},
+    {0, 5},
+    {1, 6},
+    {2, 0}
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+<!-- livebook:{"branch_parent_index":3} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input, memory_size, corrupt_size) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input, memory_size, corrupt_size)}")
+  end
+
+  def run(input, memory_size, corrupt_size) do
+    corrupt_memory =
+      input
+      |> Parser.parse()
+      |> Enum.slice(0, corrupt_size)
+      |> MapSet.new()
+
+    memory =
+      for x <- 0..(memory_size - 1), y <- 0..(memory_size - 1), reduce: MapSet.new() do
+        memory ->
+          if MapSet.member?(corrupt_memory, {x, y}) do
+            memory
+          else
+            MapSet.put(memory, {x, y})
+          end
+      end
+
+    start = {0, 0}
+    target = {memory_size - 1, memory_size - 1}
+    start_node = NodeBase.new(start, target, start)
+
+    neighbors = compute_neighbors(memory)
+    nodes = compute_nodes(memory, start, target)
+
+    pathfind(neighbors, nodes, target, [start_node], [], %{})
+    |> compute_path(start, target, [])
+    |> Enum.count()
+    |> Kernel.-(1)
+  end
+
+  # -------------------------------------------------------------------------------------------#
+
+  def compute_neighbors(memory) do
+    memory
+    |> Enum.reduce(%{}, fn {x, y}, neighbors ->
+      points =
+        [
+          {x, y - 1},
+          {x, y + 1},
+          {x - 1, y},
+          {x + 1, y}
+        ]
+        |> Enum.filter(&MapSet.member?(memory, &1))
+
+      Map.put(neighbors, {x, y}, points)
+    end)
+  end
+
+  def compute_nodes(memory, start, target) do
+    memory
+    |> Enum.reduce(%{}, fn {x, y}, nodes ->
+      Map.put(nodes, {x, y}, NodeBase.new(start, target, {x, y}))
+    end)
+  end
+
+  def pathfind(neighbors, nodes, target, open, closed, parents) do
+    current =
+      open
+      |> Enum.sort(fn node1, node2 -> node1.f < node2.f and node1.h < node2.h end)
+      |> List.first()
+
+    closed = [current | closed]
+    open = List.delete(open, current)
+
+    if current.point == target do
+      parents
+    else
+      {open, closed, parents} =
+        neighbors
+        |> Map.get(current.point)
+        |> Enum.map(fn point -> Map.get(nodes, point) end)
+        |> Enum.reduce({open, closed, parents}, fn neigh, {open, closed, parents} ->
+          closed_set = MapSet.new(closed)
+          open_set = MapSet.new(open)
+
+          cond do
+            MapSet.member?(closed_set, neigh) ->
+              {open, closed, parents}
+
+            neigh.f < current.f or MapSet.member?(open_set, neigh) == false ->
+              parents = Map.put(parents, neigh.point, current.point)
+
+              open =
+                case MapSet.member?(open_set, neigh) do
+                  true ->
+                    open
+
+                  false ->
+                    [neigh | open]
+                end
+
+              {open, closed, parents}
+
+            true ->
+              {open, closed, parents}
+          end
+        end)
+
+      pathfind(neighbors, nodes, target, open, closed, parents)
+    end
+  end
+
+  def compute_path(parents, start, point, path) do
+    path = [point | path]
+
+    if point == start do
+      path
+    else
+      next_point = Map.get(parents, point)
+      compute_path(parents, start, next_point, path)
+    end
+  end
+end
+```
+
+### Tests - Part 1
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  5,4
+  4,2
+  4,5
+  3,0
+  2,1
+  6,3
+  2,4
+  1,5
+  0,6
+  3,3
+  2,6
+  5,1
+  1,2
+  5,5
+  2,5
+  6,5
+  1,4
+  0,4
+  6,4
+  1,1
+  6,1
+  1,0
+  0,5
+  1,6
+  2,0
+  """
+  @expected 22
+
+  test "part one" do
+    assert run(@input, 7, 12) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input, 71, 1024)
+```
+
+<!-- livebook:{"branch_parent_index":3} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input, memory_size, corrupt_size) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input, memory_size, corrupt_size)}")
+  end
+
+  def run(input, memory_size, corrupt_size) do
+    base_memory =
+      input
+      |> Parser.parse()
+
+    corrupt_memory =
+      base_memory
+      |> Enum.slice(0, corrupt_size)
+      |> MapSet.new()
+
+    rest_memory =
+      base_memory
+      |> Enum.take(corrupt_size - length(base_memory))
+
+    memory =
+      for x <- 0..(memory_size - 1), y <- 0..(memory_size - 1), reduce: MapSet.new() do
+        memory ->
+          if MapSet.member?(corrupt_memory, {x, y}) do
+            memory
+          else
+            MapSet.put(memory, {x, y})
+          end
+      end
+
+    start = {0, 0}
+    target = {memory_size - 1, memory_size - 1}
+    start_node = NodeBase.new(start, target, start)
+
+    rest_memory
+    |> Enum.reduce_while(memory, fn val, memory ->
+      memory = MapSet.delete(memory, val)
+      neighbors = PartOne.compute_neighbors(memory)
+      nodes = PartOne.compute_nodes(memory, start, target)
+      path = pathfind(neighbors, nodes, target, [start_node], [], %{})
+
+      if path == nil do
+        {:halt, val}
+      else
+        {:cont, memory}
+      end
+    end)
+    |> (fn {x, y} -> "#{x},#{y}" end).()
+  end
+
+  # -------------------------------------------------------------------------------------------#
+
+  def pathfind(neighbors, nodes, target, open, closed, parents) do
+    current =
+      open
+      |> Enum.sort(fn node1, node2 -> node1.f < node2.f and node1.h < node2.h end)
+      |> List.first()
+
+    closed = [current | closed]
+    open = List.delete(open, current)
+
+    cond do
+      current == nil ->
+        nil
+
+      current.point == target ->
+        parents
+
+      true ->
+        {open, closed, parents} =
+          neighbors
+          |> Map.get(current.point)
+          |> Enum.map(fn point -> Map.get(nodes, point) end)
+          |> Enum.reduce({open, closed, parents}, fn neigh, {open, closed, parents} ->
+            closed_set = MapSet.new(closed)
+            open_set = MapSet.new(open)
+
+            cond do
+              MapSet.member?(closed_set, neigh) ->
+                {open, closed, parents}
+
+              neigh.f < current.f or MapSet.member?(open_set, neigh) == false ->
+                parents = Map.put(parents, neigh.point, current.point)
+
+                open =
+                  case MapSet.member?(open_set, neigh) do
+                    true ->
+                      open
+
+                    false ->
+                      [neigh | open]
+                  end
+
+                {open, closed, parents}
+
+              true ->
+                {open, closed, parents}
+            end
+          end)
+
+        pathfind(neighbors, nodes, target, open, closed, parents)
+    end
+  end
+
+  def compute_path(parents, start, point, path) do
+    path = [point | path]
+
+    if point == start do
+      path
+    else
+      next_point = Map.get(parents, point)
+      compute_path(parents, start, next_point, path)
+    end
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+@input """
+  5,4
+  4,2
+  4,5
+  3,0
+  2,1
+  6,3
+  2,4
+  1,5
+  0,6
+  3,3
+  2,6
+  5,1
+  1,2
+  5,5
+  2,5
+  6,5
+  1,4
+  0,4
+  6,4
+  1,1
+  6,1
+  1,0
+  0,5
+  1,6
+  2,0
+  """
+  @expected "6,1"
+
+  test "part two" do
+    assert run(@input, 7, 12) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input, 71, 1024)
+```
+
+<!-- livebook:{"offset":13062,"stamp":{"token":"XCP.XyrsoNFuXj6Asom9ZqErUcLMKQRZUt9NYbTW2TsnKpHQLTITlufWP88fNgtsXOiN81Oij9N02IDzFfFwgcvcQ5879haREDTOzU8SoUXr658vGuWVueo","version":2}} -->
