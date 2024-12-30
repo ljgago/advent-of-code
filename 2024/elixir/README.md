@@ -16,6 +16,7 @@
 - [Day 14](livebooks/day14.livemd)
 - [Day 15](livebooks/day15.livemd)
 - [Day 16](livebooks/day16.livemd)
+- [Day 17](livebooks/day17.livemd)
 
 ## License
 
