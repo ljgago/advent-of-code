@@ -1,7 +1,9 @@
 //! # Advent of Code - Day 11 - Part Two
 
-pub fn part2() -> usize {
-    return 0;
+use crate::part1;
+
+pub fn part2(input: &str, blinks: usize) -> usize {
+    part1::part1(input, blinks)
 }
 
 #[cfg(test)]
@@ -9,7 +11,8 @@ mod day11 {
     use super::*;
 
     #[test]
-    fn test_part2() {
-        assert_eq!(part2(), 0);
+    fn test_part1() {
+        let input = "125 17";
+        assert_eq!(part2(input, 25), 55312);
     }
 }

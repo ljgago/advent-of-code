@@ -4,11 +4,11 @@ mod part1;
 mod part2;
 
 fn main() {
-    let _input = include_str!("../input.txt");
+    let input = include_str!("../puzzle_2024_11.txt");
 
     println!("--- Part One ---");
-    println!("Result: {}", part1::part1());
+    println!("Result: {}", part1::part1(input, 25));
 
     println!("--- Part Two ---");
-    println!("Result: {}", part2::part2());
+    println!("Result: {}", part2::part2(input, 75));
 }
