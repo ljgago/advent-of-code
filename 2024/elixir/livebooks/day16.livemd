@@ -1,0 +1,417 @@
+<!-- livebook:{"autosave_interval_s":30} -->
+
+# Advent of Code 2024 - Day 16
+
+```elixir
+Mix.install([
+  {:kino_aoc, "~> 0.1"}
+])
+```
+
+## Introduction
+
+### --- Day 16: Reindeer Maze ---
+
+It's time again for the [Reindeer Olympics](https://adventofcode.com/2015/day/14)! This year, the big event is the **Reindeer Maze**, where the Reindeer compete for the **lowest score**.
+
+You and The Historians arrive to search for the Chief right as the event is about to start. It wouldn't hurt to watch a little, right?
+
+The Reindeer start on the Start Tile (marked `S`) facing **East** and need to reach the End Tile (marked `E`). They can move forward one tile at a time (increasing their score by `1` point), but never into a wall (`#`). They can also rotate clockwise or counterclockwise 90 degrees at a time (increasing their score by `1000` points).
+
+To figure out the best place to sit, you start by grabbing a map (your puzzle input) from a nearby kiosk. For example:
+
+```
+###############
+#.......#....E#
+#.#.###.#.###.#
+#.....#.#...#.#
+#.###.#####.#.#
+#.#.#.......#.#
+#.#.#####.###.#
+#...........#.#
+###.#.#####.#.#
+#...#.....#.#.#
+#.#.#.###.#.#.#
+#.....#...#.#.#
+#.###.#.#.#.#.#
+#S..#.....#...#
+###############
+```
+
+There are many paths through this maze, but taking any of the best paths would incur a score of only **`7036`**. This can be achieved by taking a total of `36` steps forward and turning 90 degrees a total of `7` times:
+
+```
+###############
+#.......#....E#
+#.#.###.#.###^#
+#.....#.#...#^#
+#.###.#####.#^#
+#.#.#.......#^#
+#.#.#####.###^#
+#..>>>>>>>>v#^#
+###^#.#####v#^#
+#>>^#.....#v#^#
+#^#.#.###.#v#^#
+#^....#...#v#^#
+#^###.#.#.#v#^#
+#S..#.....#>>^#
+###############
+```
+
+Here's a second example:
+
+```
+#################
+#...#...#...#..E#
+#.#.#.#.#.#.#.#.#
+#.#.#.#...#...#.#
+#.#.#.#.###.#.#.#
+#...#.#.#.....#.#
+#.#.#.#.#.#####.#
+#.#...#.#.#.....#
+#.#.#####.#.###.#
+#.#.#.......#...#
+#.#.###.#####.###
+#.#.#...#.....#.#
+#.#.#.#####.###.#
+#.#.#.........#.#
+#.#.#.#########.#
+#S#.............#
+#################
+```
+
+In this maze, the best paths cost **`11048`** points; following one such path would look like this:
+
+```
+#################
+#...#...#...#..E#
+#.#.#.#.#.#.#.#^#
+#.#.#.#...#...#^#
+#.#.#.#.###.#.#^#
+#>>v#.#.#.....#^#
+#^#v#.#.#.#####^#
+#^#v..#.#.#>>>>^#
+#^#v#####.#^###.#
+#^#v#..>>>>^#...#
+#^#v###^#####.###
+#^#v#>>^#.....#.#
+#^#v#^#####.###.#
+#^#v#^........#.#
+#^#v#^#########.#
+#S#>>^..........#
+#################
+```
+
+Note that the path shown above includes one 90 degree turn as the very first move, rotating the Reindeer from facing East to facing North.
+
+Analyze your map carefully. **What is the lowest score a Reindeer could possibly get?**
+
+### --- Part Two ---
+
+Description
+
+## Puzzle
+
+<!-- livebook:{"attrs":"eyJhc3NpZ25fdG8iOiJwdXp6bGVfaW5wdXQiLCJkYXkiOiIxNiIsInNlc3Npb25fc2VjcmV0IjoiQU9DX1NFU1NJT04iLCJ5ZWFyIjoiMjAyNCJ9","chunks":null,"kind":"Elixir.KinoAOC.HelperCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, puzzle_input} =
+  KinoAOC.download_puzzle("2024", "16", System.fetch_env!("LB_AOC_SESSION"))
+```
+
+```elixir
+IO.puts(puzzle_input)
+```
+
+## Tools
+
+### Tools - Code
+
+```elixir
+defmodule Matrix do
+  def size(matrix) do
+    rows = matrix |> length()
+    cols = matrix |> hd() |> length()
+
+    {rows, cols}
+  end
+
+  def value(matrix, {x, y}) do
+    {rows, cols} = size(matrix)
+
+    if x >= 0 and x < cols and (y >= 0 and y < rows) do
+      matrix
+      |> Enum.at(y, [])
+      |> Enum.at(x)
+    else
+      nil
+    end
+  end
+end
+
+defmodule NodeBase do
+  defstruct g: 0,
+            h: 0,
+            f: 0,
+            point: {0, 0},
+            from: {0, 0},
+            neighbors: [],
+            direction: ""
+end
+```
+
+## Parser
+
+### Code - Parser
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&String.codepoints(&1))
+  end
+end
+```
+
+### Tests - Parser
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule ParserTest do
+  use ExUnit.Case, async: true
+  import Parser
+
+  @input """
+  ###############
+  #.......#....E#
+  #.#.###.#.###.#
+  #.....#.#...#.#
+  #.###.#####.#.#
+  #.#.#.......#.#
+  #.#.#####.###.#
+  #...........#.#
+  ###.#.#####.#.#
+  #...#.....#.#.#
+  #.#.#.###.#.#.#
+  #.....#...#.#.#
+  #.###.#.#.#.#.#
+  #S..#.....#...#
+  ###############
+  """
+  @expected [
+    ["#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#"],
+    ["#", ".", ".", ".", ".", ".", ".", ".", "#", ".", ".", ".", ".", "E", "#"],
+    ["#", ".", "#", ".", "#", "#", "#", ".", "#", ".", "#", "#", "#", ".", "#"],
+    ["#", ".", ".", ".", ".", ".", "#", ".", "#", ".", ".", ".", "#", ".", "#"],
+    ["#", ".", "#", "#", "#", ".", "#", "#", "#", "#", "#", ".", "#", ".", "#"],
+    ["#", ".", "#", ".", "#", ".", ".", ".", ".", ".", ".", ".", "#", ".", "#"],
+    ["#", ".", "#", ".", "#", "#", "#", "#", "#", ".", "#", "#", "#", ".", "#"],
+    ["#", ".", ".", ".", ".", ".", ".", ".", ".", ".", ".", ".", "#", ".", "#"],
+    ["#", "#", "#", ".", "#", ".", "#", "#", "#", "#", "#", ".", "#", ".", "#"],
+    ["#", ".", ".", ".", "#", ".", ".", ".", ".", ".", "#", ".", "#", ".", "#"],
+    ["#", ".", "#", ".", "#", ".", "#", "#", "#", ".", "#", ".", "#", ".", "#"],
+    ["#", ".", ".", ".", ".", ".", "#", ".", ".", ".", "#", ".", "#", ".", "#"],
+    ["#", ".", "#", "#", "#", ".", "#", ".", "#", ".", "#", ".", "#", ".", "#"],
+    ["#", "S", ".", ".", "#", ".", ".", ".", ".", ".", "#", ".", ".", ".", "#"],
+    ["#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#", "#"]
+  ]
+
+  test "parse test" do
+    assert parse(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+<!-- livebook:{"branch_parent_index":3} -->
+
+## Part One
+
+### Code - Part 1
+
+```elixir
+defmodule PartOne do
+  def solve(input) do
+    IO.puts("--- Part One ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+    matrix =
+      input
+      |> Parser.parse()
+
+    {rows, cols} = Matrix.size(matrix)
+
+    map =
+      for y <- 0..(rows - 1), x <- 0..(cols - 1), reduce: %{} do
+        map ->
+          case Matrix.value(matrix, {x, y}) do
+            "#" ->
+              map
+
+            value ->
+              Map.put(map, {x, y}, %{value: value, current: {0, 0}, g: 0, h: 0, dir: ""})
+          end
+      end
+
+    {start_point, target_point} =
+      map
+      |> Enum.reduce({{0, 0}, {0, 0}}, fn {point, %{value: value}}, {start_point, target_point} ->
+        case value do
+          "S" -> {point, target_point}
+          "E" -> {start_point, point}
+          _ -> {start_point, target_point}
+        end
+      end)
+
+    first_node = create_node(map, start_point, target_point, nil, start_node)
+
+    path = pathfind(map, target_point, [first_node], [])
+
+    # start_point =
+    #   map
+    #   |> Enum.find(fn {_, value} -> value == "S" end)
+    #   |> elem(0)
+
+    # end_point =
+    #   map
+    #   |> Enum.find(fn {_, value} -> value == "E" end)
+    #   |> elem(0)
+  end
+
+  defp distance({x1, y1}, {x2, y2}) do
+    abs(x1 - x2) + abs(y1 - y2)
+  end
+
+  def calculate_g(from_point, current_point) do
+    
+  end
+
+  def create_node(map, start, target, from, current) do
+    g = distance(point, start)
+    h = distance(point, target)
+    f = g + h
+
+    neighbors =
+      [{x, y - 1}, {x, y + 1}, {x - 1, y}, {x + 1, y}]
+      |> Enum.filter(fn p -> Map.get(map, p) != nil end)
+
+    %NodeBase{
+      g: g,
+      h: h,
+      f: f,
+      point: point,
+      from: from,
+      neighbors: neighbors
+    }
+  end
+
+  def sort_nodes(nodes) do
+    nodes
+    |> Enum.sort(fn node1, node2 -> f(node1) < f(node2) end)
+  end
+
+  def pathfind(map, end_point, open, closed) do
+    if end_point == point do
+      closed
+    else
+      up = Map.get(map, {x, y - 1})
+      down = Map.get(map, {x, y + 1})
+      left = Map.get(map, {x - 1, y})
+      right = Map.get(map, {x + 1, y})
+    end
+  end
+end
+```
+
+### Tests - Part 1
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartOneTest do
+  use ExUnit.Case, async: true
+  import PartOne
+
+  @input """
+  ###############
+  #.......#....E#
+  #.#.###.#.###.#
+  #.....#.#...#.#
+  #.###.#####.#.#
+  #.#.#.......#.#
+  #.#.#####.###.#
+  #...........#.#
+  ###.#.#####.#.#
+  #...#.....#.#.#
+  #.#.#.###.#.#.#
+  #.....#...#.#.#
+  #.###.#.#.#.#.#
+  #S..#.....#...#
+  ###############
+  """
+  @expected nil
+
+  test "part one" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 1
+
+```elixir
+PartOne.solve(puzzle_input)
+```
+
+<!-- livebook:{"branch_parent_index":3} -->
+
+## Part Two
+
+### Code - Part 2
+
+```elixir
+defmodule PartTwo do
+  def solve(input) do
+    IO.puts("--- Part Two ---")
+    IO.puts("Result: #{run(input)}")
+  end
+
+  def run(input) do
+  end
+end
+```
+
+### Tests - Part 2
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule PartTwoTest do
+  use ExUnit.Case, async: true
+  import PartTwo
+
+  @input ""
+  @expected nil
+
+  test "part two" do
+    assert run(@input) == @expected
+  end
+end
+
+ExUnit.run()
+```
+
+### Solution - Part 2
+
+```elixir
+PartTwo.solve(puzzle_input)
+```
+
+<!-- livebook:{"offset":8947,"stamp":{"token":"XCP.3pGvrAbi1IqN0WdGldxXOKBvRKa1P-h-Dtwdzu88ARL7xau4F7BXzakZ1vX1byPU1FZCDlq1bYzTpXw4MszXvwByHJtRpoMVvBfdCl4xxUwiZ9XIoQw","version":2}} -->
